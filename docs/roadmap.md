@@ -42,12 +42,39 @@
 - ✅ Translated shortcut descriptions (no hardcoded English)
 - ✅ Added translation keys for Press, to save and close, or, to save and add another
 
-### 1.4 Account Management ⏳ PENDING
+### 1.4 Account Management ✅ COMPLETED
 
-- **Feature:** Inside Settings > Accounts tab
-- **Logic:** Allow creating, renaming, and deleting accounts
-- **Logic:** Allow setting/adjusting the `initial_balance`
-- **UI:** Similar to Categories tab with account type icons
+- ✅ Created Settings > Accounts tab with full CRUD operations
+- ✅ Account types: Cash, Bank, Credit Card, Savings
+- ✅ Initial balance configuration with decimal precision
+- ✅ Current balance calculation (initial_balance + sum of transactions)
+- ✅ Account creation dialog with form validation (Zod)
+- ✅ Edit account functionality
+- ✅ Delete confirmation with safety warning
+- ✅ Negative balance display with red color and minus prefix
+- ✅ Server actions use service role key to bypass RLS
+- ✅ Multilingual account type labels
+
+### 1.5 Budget Features ✅ COMPLETED
+
+- ✅ Database migration adding budget fields to categories table
+- ✅ Three budget types: Variable (no budget), Fixed Recurring, Sinking Fund
+- ✅ Target amount configuration with decimal precision
+- ✅ Frequency options: Monthly, Quarterly, Semi-Annual, Annual
+- ✅ Automatic monthly_target calculation based on frequency
+- ✅ Conditional form fields in category dialog (shown only for fixed/sinking_fund)
+- ✅ Database function `calculate_monthly_target()` for consistency
+- ✅ Budget settings fully integrated into category CRUD
+
+### 1.6 Safe-to-Spend Dashboard ✅ COMPLETED
+
+- ✅ Implemented Safe-to-Spend calculation (Total Liquid - Monthly Committed)
+- ✅ Replaced main balance card with Safe-to-Spend display
+- ✅ Total Liquid: Sum of all account balances
+- ✅ Monthly Committed: Sum of monthly_target for fixed/sinking_fund categories
+- ✅ Color-coded display (green for positive, red for negative)
+- ✅ Breakdown showing calculation components
+- ✅ Real-time updates based on accounts and budget settings
 
 ---
 
@@ -210,28 +237,34 @@
 
 ## Progress Summary
 
-### ✅ Completed
+### ✅ Completed (Phase 1)
 - Authentication system (Clerk)
 - Internationalization (next-intl v3)
 - Dashboard with transaction list
-- Summary cards with statistics
+- Summary cards with Safe-to-Spend
 - Quick add transaction dialog
 - Category management (CRUD)
 - Multilingual system categories
 - Currency formatting
 - Icon and color pickers
 - Keyboard shortcuts
+- Account management (CRUD)
+- Budget tracking features
+- Safe-to-Spend calculation
+- Monthly target calculation
+- Settings page with tabs
 
-### ⏳ In Progress
-- Account management
+### ⏳ In Progress (Phase 2)
 - Transaction editing/deletion
-
-### 📋 Planned
 - Date navigation
 - Charts and visualizations
+
+### 📋 Planned (Phase 3+)
 - Search and filtering
 - Bulk operations
 - Data export
+- Budget alerts
+- Recurring transactions
 - Monetization/limits
 - Landing page
 - Mobile optimization

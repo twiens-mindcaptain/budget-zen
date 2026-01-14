@@ -366,13 +366,176 @@ Das war's! Die Komponenten holen sich die Übersetzung automatisch via `getCateg
 - Keyboard Shortcuts sind multilingual
 - Keine hardcoded English-Texte mehr
 
+## Account Management Übersetzungen (v1.2.0)
+
+### Neue Übersetzungs-Keys für Accounts
+
+#### messages/en.json
+```json
+{
+  "settings": {
+    "accounts": {
+      "title": "Accounts",
+      "description": "Manage your accounts and balances",
+      "addAccount": "Add Account",
+      "editAccount": "Edit Account",
+      "deleteAccount": "Delete Account",
+      "currentBalance": "Current Balance",
+      "initialBalance": "Initial Balance",
+      "accountName": "Account Name",
+      "accountType": "Account Type",
+      "types": {
+        "cash": "Cash",
+        "bank": "Bank Account",
+        "credit": "Credit Card",
+        "savings": "Savings"
+      },
+      "createSuccess": "Account created successfully",
+      "updateSuccess": "Account updated successfully",
+      "deleteSuccess": "Account deleted successfully",
+      "deleteWarning": "Are you sure you want to delete this account?",
+      "deleteHint": "This will not delete associated transactions."
+    }
+  }
+}
+```
+
+#### messages/de.json
+```json
+{
+  "settings": {
+    "accounts": {
+      "title": "Konten",
+      "description": "Verwalte deine Konten und Salden",
+      "addAccount": "Konto hinzufügen",
+      "editAccount": "Konto bearbeiten",
+      "deleteAccount": "Konto löschen",
+      "currentBalance": "Aktueller Saldo",
+      "initialBalance": "Anfangssaldo",
+      "accountName": "Kontoname",
+      "accountType": "Kontotyp",
+      "types": {
+        "cash": "Bargeld",
+        "bank": "Bankkonto",
+        "credit": "Kreditkarte",
+        "savings": "Sparkonto"
+      },
+      "createSuccess": "Konto erfolgreich erstellt",
+      "updateSuccess": "Konto erfolgreich aktualisiert",
+      "deleteSuccess": "Konto erfolgreich gelöscht",
+      "deleteWarning": "Möchtest du dieses Konto wirklich löschen?",
+      "deleteHint": "Dies löscht keine zugehörigen Transaktionen."
+    }
+  }
+}
+```
+
+## Budget Features Übersetzungen (v1.2.0)
+
+### Neue Übersetzungs-Keys für Budget
+
+#### messages/en.json
+```json
+{
+  "budget": {
+    "safeToSpend": "Safe to Spend",
+    "totalLiquid": "Total Liquid",
+    "monthlyCommitted": "Monthly Committed",
+    "budgetType": "Budget Type",
+    "targetAmount": "Target Amount",
+    "frequency": "Frequency",
+    "types": {
+      "variable": "Variable (No Budget)",
+      "fixed": "Fixed Recurring",
+      "sinking_fund": "Sinking Fund"
+    },
+    "frequencies": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semi_annual": "Semi-Annual",
+      "annual": "Annual"
+    },
+    "description": {
+      "variable": "No budget tracking",
+      "fixed": "Regular recurring expenses (rent, subscriptions)",
+      "sinking_fund": "Savings goal (vacation, car, emergency fund)"
+    }
+  }
+}
+```
+
+#### messages/de.json
+```json
+{
+  "budget": {
+    "safeToSpend": "Verfügbar zum Ausgeben",
+    "totalLiquid": "Gesamtliquidität",
+    "monthlyCommitted": "Monatlich gebunden",
+    "budgetType": "Budget-Typ",
+    "targetAmount": "Zielbetrag",
+    "frequency": "Häufigkeit",
+    "types": {
+      "variable": "Variabel (Kein Budget)",
+      "fixed": "Fest wiederkehrend",
+      "sinking_fund": "Ansparfonds"
+    },
+    "frequencies": {
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "semi_annual": "Halbjährlich",
+      "annual": "Jährlich"
+    },
+    "description": {
+      "variable": "Keine Budget-Verfolgung",
+      "fixed": "Regelmäßige wiederkehrende Ausgaben (Miete, Abos)",
+      "sinking_fund": "Sparziel (Urlaub, Auto, Notfallfonds)"
+    }
+  }
+}
+```
+
+## Safe-to-Spend Formel
+
+**Berechnung:**
+```typescript
+Safe to Spend = Total Liquid Cash - Monthly Committed
+
+where:
+- Total Liquid = Sum of all account balances (initial_balance + transactions)
+- Monthly Committed = Sum of monthly_target for categories with budget_type 'fixed' or 'sinking_fund'
+```
+
+**Beispiel:**
+- Bankkonto: 2.500 €
+- Kreditkarte: -300 €
+- Bargeld: 200 €
+**Total Liquid = 2.400 €**
+
+**Budget-Kategorien:**
+- Miete (fixed, monthly): 800 €/Monat
+- Strom (fixed, quarterly): 300 € → 100 €/Monat
+- Urlaub (sinking_fund, annual): 1.200 € → 100 €/Monat
+**Monthly Committed = 1.000 €**
+
+**Safe to Spend = 2.400 € - 1.000 € = 1.400 €**
+
 ## Statistik
 
-**Dateien erstellt:** 2
+**Dateien erstellt (v1.1.0):** 2
 - `migration-add-translation-key.sql`
 - `lib/i18n-helpers.ts`
 
-**Dateien aktualisiert:** 11
+**Dateien erstellt (v1.2.0):** 8
+- `migration-add-budgeting-logic.sql`
+- `migration-add-accounts-rls-policies.sql`
+- `app/actions/accounts.ts`
+- `components/settings/accounts-tab.tsx`
+- `components/settings/account-dialog.tsx`
+- `components/settings/delete-account-dialog.tsx`
+- `components/settings/settings-tabs.tsx`
+- `components/ui/tabs.tsx`
+
+**Dateien aktualisiert (v1.1.0):** 11
 - `messages/en.json`
 - `messages/de.json`
 - `lib/types.ts`
@@ -385,9 +548,17 @@ Das war's! Die Komponenten holen sich die Übersetzung automatisch via `getCateg
 - `components/dashboard/summary-cards.tsx`
 - `app/actions/seed.ts`
 
-**Übersetzungs-Keys hinzugefügt:** 20+
-- 16 Kategorien (category.*)
-- 4 Keyboard Shortcut-Texte (transaction.press, etc.)
+**Dateien aktualisiert (v1.2.0):** 6
+- `messages/en.json` (40+ neue Keys)
+- `messages/de.json` (40+ neue Keys)
+- `lib/types.ts` (Budget types, Account types)
+- `app/actions/categories.ts` (Budget fields)
+- `app/actions/transaction.ts` (getSafeToSpend)
+- `app/[locale]/settings/page.tsx` (Data loading refactor)
+
+**Übersetzungs-Keys gesamt:** 60+
+- v1.1.0: 20+ Keys (16 Kategorien, 4 Keyboard Shortcuts)
+- v1.2.0: 40+ Keys (Accounts, Budget Types, Frequencies, Safe-to-Spend)
 
 **Sprachen unterstützt:** 2
 - Englisch (en)
@@ -399,5 +570,12 @@ Das war's! Die Komponenten holen sich die Übersetzung automatisch via `getCateg
 ---
 
 **Status:** ✅ Vollständig implementiert und getestet
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Letztes Update:** 2026-01-13
+
+**v1.2.0 Highlights:**
+- ✅ Account Management mit vollständiger CRUD-Funktionalität
+- ✅ Budget-Tracking (Variable, Fixed, Sinking Fund)
+- ✅ Safe-to-Spend Berechnung und Dashboard-Anzeige
+- ✅ Monatliches Ziel basierend auf Häufigkeit
+- ✅ Negative Saldo-Anzeige mit roter Farbe

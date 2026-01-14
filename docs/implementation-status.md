@@ -252,7 +252,7 @@ const switchLanguage = (newLocale: string) => {
 - **Route**: [app/\[locale\]/settings/page.tsx](../app/[locale]/settings/page.tsx)
 - **Status**: ✅ Fully implemented
 - **Features**:
-  - Tabbed interface (Categories, future: Accounts, General)
+  - Tabbed interface (Categories, Accounts)
   - Category CRUD operations (Create, Read, Update, Delete)
   - System categories with multilingual support
   - User categories with custom names
@@ -262,6 +262,8 @@ const switchLanguage = (newLocale: string) => {
   - Delete confirmation dialog
   - Form validation with Zod
   - Category display with translated names via `getCategoryDisplayName()`
+  - Budget settings for categories (variable, fixed, sinking fund)
+  - Target amount and frequency configuration
 
 ### 6. Multilingual Category System
 - **Status**: ✅ Fully implemented
@@ -276,7 +278,50 @@ const switchLanguage = (newLocale: string) => {
   - Check constraint ensures data integrity (name OR translation_key required)
   - Database index on `translation_key` for performance
 
-### 7. Currency Formatting
+### 7. Account Management
+- **Routes**: [app/\[locale\]/settings/page.tsx](../app/[locale]/settings/page.tsx)
+- **Server Actions**: [app/actions/accounts.ts](../app/actions/accounts.ts)
+- **Status**: ✅ Fully implemented
+- **Features**:
+  - Full CRUD operations (Create, Read, Update, Delete)
+  - Account types: Cash, Bank, Credit Card, Savings
+  - Initial balance configuration
+  - Current balance calculation (initial_balance + sum of transactions)
+  - Negative balance display with red color and minus prefix
+  - Account dialog with form validation (Zod)
+  - Delete confirmation with safety warning
+  - Server actions use service role key to bypass RLS
+  - Multilingual account type labels
+
+### 8. Budget Features
+- **Database**: Migration with budget fields on categories
+- **Status**: ✅ Fully implemented
+- **Features**:
+  - Three budget types:
+    - **Variable**: No budget tracking (default)
+    - **Fixed Recurring**: Regular expenses (rent, subscriptions)
+    - **Sinking Fund**: Savings goals (vacation, car, emergency)
+  - Target amount configuration with decimal precision
+  - Frequency options: Monthly, Quarterly, Semi-Annual, Annual
+  - Automatic monthly_target calculation based on frequency
+  - Conditional form fields (shown only for fixed/sinking_fund)
+  - Database function `calculate_monthly_target()` for consistency
+  - Budget fields fully integrated into category CRUD
+
+### 9. Safe-to-Spend Dashboard
+- **Component**: [components/dashboard/summary-cards.tsx](../components/dashboard/summary-cards.tsx)
+- **Server Action**: [app/actions/transaction.ts](../app/actions/transaction.ts) `getSafeToSpend()`
+- **Status**: ✅ Fully implemented
+- **Formula**: `Safe to Spend = Total Liquid Cash - Monthly Committed`
+- **Features**:
+  - Prominent display on dashboard (replaces main balance card)
+  - Total Liquid: Sum of all account balances (initial + transactions)
+  - Monthly Committed: Sum of monthly_target for fixed/sinking_fund categories
+  - Color-coded: Green for positive, Red for negative
+  - Breakdown display showing calculation components
+  - Real-time updates based on accounts and budget settings
+
+### 10. Currency Formatting
 - **File**: [lib/currency.ts](../lib/currency.ts)
 - **Status**: ✅ Fully implemented
 - **Features**:
@@ -287,14 +332,16 @@ const switchLanguage = (newLocale: string) => {
   - Helper function `getFullLocale()` for locale mapping
   - Currency symbol position (before/after) based on currency type
 
-### 8. Type System
+### 11. Type System
 - **File**: [lib/types.ts](../lib/types.ts)
 - **Status**: ✅ Fully implemented
 - **Features**:
   - Zod schemas for all forms
   - Type inference from schemas
   - Database type definitions
-  - Category interface with `translation_key` support
+  - Category interface with `translation_key` and budget fields support
+  - Account types and schemas
+  - Budget types (BudgetType, BudgetFrequency)
   - Strict type safety (no `any` types)
 
 ### Transaction Schema Example
@@ -327,16 +374,17 @@ User expense/income records:
 - `created_at`, `updated_at`
 
 #### accounts
-User bank accounts/wallets:
+User bank accounts/wallets with current balance tracking:
 - `id` (UUID, primary key)
 - `user_id` (text, Clerk user ID)
 - `name` (text)
 - `type` (enum: cash, bank, credit, savings)
-- `initial_balance` (decimal/numeric)
+- `initial_balance` (decimal/numeric) - Starting balance
 - `created_at`
+- **Note**: Current balance calculated dynamically (initial_balance + sum of transactions)
 
 #### categories
-Transaction categories with multilingual support:
+Transaction categories with multilingual support and budget tracking:
 - `id` (UUID, primary key)
 - `user_id` (text, Clerk user ID)
 - `name` (text, nullable) - For user-created categories
@@ -344,9 +392,14 @@ Transaction categories with multilingual support:
 - `icon` (text) - Lucide icon name
 - `color` (text) - Hex color code
 - `type` (enum: income, expense)
+- `budget_type` (text) - Budget tracking mode: variable, fixed, sinking_fund
+- `target_amount` (decimal, nullable) - Target amount for budgeting
+- `frequency` (text) - Frequency: monthly, quarterly, semi_annual, annual
+- `monthly_target` (decimal, nullable) - Calculated monthly target amount
 - `created_at`
 - **Constraint**: `name` OR `translation_key` must be set (CHECK constraint)
 - **Index**: On `translation_key` for performance
+- **Function**: `calculate_monthly_target(target_amount, frequency)` for automatic calculation
 
 ### Currency Handling
 - **Critical Rule**: NEVER use `float` or JavaScript `number` for currency
@@ -439,6 +492,25 @@ export async function createTransaction(formData: FormData) {
 - **Problem**: No thousands separator or locale-specific decimal formatting
 - **Solution**: Implemented `Intl.NumberFormat` with locale parameter (de-DE: 1.234,56 / en-US: 1,234.56)
 
+### Issue: RLS Policy Violation on Account Creation (RESOLVED)
+- **Problem**: "new row violates row-level security policy for table 'accounts'"
+- **Root Cause**: Server Actions were using client-side `supabase` instead of `getServerSupabase()`
+- **Solution**: Changed all imports in `app/actions/accounts.ts` to use `getServerSupabase()` which bypasses RLS using service role key (safe because Clerk handles authentication)
+
+### Issue: NextIntl Context in Tabs (RESOLVED)
+- **Problem**: "Failed to call `useTranslations` because the context from `NextIntlClientProvider` was not found"
+- **Cause**: Mixing async server components with Suspense inside client Tabs component
+- **Solution**: Refactored settings page to load all data server-side, created `SettingsTabs` client component that receives data as props
+
+### Issue: TypeScript insertAccountSchema Type Mismatch (RESOLVED)
+- **Problem**: "Type 'string | undefined' is not assignable to type 'string'"
+- **Cause**: `initial_balance` field had `.default('0.00')` without `.optional()`
+- **Solution**: Added `.optional()` before `.default()` in schema definition
+
+### Issue: Negative Balance Display (RESOLVED)
+- **Problem**: Negative account balances displayed in black without minus sign
+- **Solution**: Added conditional styling with red color (`text-red-600`) and minus prefix using `Math.abs()` with `formatCurrency()`
+
 ## Development Guidelines
 
 ### Adding a New Feature
@@ -508,11 +580,10 @@ npm run build
 ## Future Enhancements
 
 ### Planned Features
-- [ ] Budget tracking and alerts
-- [ ] Recurring transactions
+- [ ] Budget alerts and notifications (when exceeding targets)
+- [ ] Recurring transactions (auto-create monthly bills)
 - [ ] Data export (CSV, Excel)
 - [ ] Advanced filtering and search
-- [ ] Accounts management UI (create, edit, delete accounts)
 - [ ] Charts and visualizations (spending by category, trends over time)
 - [ ] Dark mode
 - [ ] Date navigation (month/year picker)
@@ -520,6 +591,8 @@ npm run build
 - [ ] Bulk operations (delete multiple transactions)
 - [ ] Search transactions
 - [ ] Filter by date range, account, category
+- [ ] Budget progress tracking (spent vs. target for current month)
+- [ ] Recurring transaction templates
 
 ### Completed Features
 - [x] Categories management UI (CRUD operations)
@@ -528,6 +601,12 @@ npm run build
 - [x] Icon picker for categories
 - [x] Color picker for categories
 - [x] Keyboard shortcuts with proper formatting
+- [x] Accounts management UI (create, edit, delete accounts)
+- [x] Budget tracking (variable, fixed, sinking fund)
+- [x] Safe-to-Spend calculation and display
+- [x] Account balance tracking (initial + transactions)
+- [x] Budget target amounts with frequency configuration
+- [x] Monthly target calculation based on frequency
 
 ### Technical Improvements
 - [ ] Unit tests (Jest + React Testing Library)
@@ -555,10 +634,22 @@ npm run build
 ---
 
 **Last Updated**: 2026-01-13
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Status**: Active Development
 
-**Recent Updates (v1.1.0)**:
+**Recent Updates (v1.2.0)**:
+- ✅ Complete account management system with CRUD operations
+- ✅ Budget tracking features (variable, fixed recurring, sinking fund)
+- ✅ Safe-to-Spend calculation and dashboard display
+- ✅ Target amount configuration with frequency options
+- ✅ Automatic monthly_target calculation based on frequency
+- ✅ Current balance tracking for accounts (initial + transactions)
+- ✅ Negative balance display with red color and minus prefix
+- ✅ Service role key pattern for RLS bypass in server actions
+- ✅ Settings page with functional Accounts tab
+- ✅ 40+ new i18n translations for accounts and budget features
+
+**Previous Updates (v1.1.0)**:
 - ✅ Complete category management system with CRUD operations
 - ✅ Multilingual system categories with translation_key support
 - ✅ Locale-aware currency formatting (Intl.NumberFormat)
