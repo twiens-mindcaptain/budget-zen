@@ -108,6 +108,63 @@
       "expenseCategories": "Expense Categories",
       "noIncome": "No income categories yet. Create one to get started.",
       "noExpense": "No expense categories yet. Create one to get started."
+    },
+    "accounts": {
+      "title": "Accounts",
+      "description": "Manage your bank accounts, cash, and credit cards",
+      "addNew": "Add Account",
+      "createAccount": "Create Account",
+      "editAccount": "Edit Account",
+      "createDescription": "Add a new account to track your finances",
+      "editDescription": "Update account details",
+      "name": "Account Name",
+      "namePlaceholder": "e.g., Chase Checking",
+      "type": "Account Type",
+      "initialBalance": "Initial Balance",
+      "currentBalance": "Current Balance",
+      "save": "Save Changes",
+      "create": "Create Account",
+      "delete": "Delete",
+      "deleteTitle": "Delete Account?",
+      "deleteDescription": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "noAccounts": "No accounts yet. Create one to get started.",
+      "balance": "Balance",
+      "createSuccess": "Account created successfully",
+      "updateSuccess": "Account updated successfully",
+      "deleteSuccess": "Account deleted successfully",
+      "types": {
+        "cash": "Cash",
+        "bank": "Bank Account",
+        "credit": "Credit Card",
+        "savings": "Savings"
+      }
+    }
+  },
+  "budget": {
+    "title": "Budget",
+    "safeToSpend": "Safe to Spend",
+    "totalLiquid": "Total Liquid Cash",
+    "monthlyCommitted": "Monthly Committed",
+    "breakdown": "Breakdown",
+    "budgetType": "Budget Type",
+    "targetAmount": "Target Amount",
+    "frequency": "Frequency",
+    "monthlyTarget": "Monthly Target",
+    "types": {
+      "variable": "Variable (No Budget)",
+      "fixed": "Fixed Recurring",
+      "sinking_fund": "Sinking Fund"
+    },
+    "frequencies": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semi_annual": "Semi-Annual",
+      "annual": "Annual"
+    },
+    "descriptions": {
+      "variable": "No budget tracking for this category",
+      "fixed": "Regular recurring expense (e.g., rent, subscriptions)",
+      "sinking_fund": "Savings goal for future expense (e.g., vacation, car)"
     }
   }
 }

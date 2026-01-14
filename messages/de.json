@@ -108,6 +108,63 @@
       "expenseCategories": "Ausgabenkategorien",
       "noIncome": "Noch keine Einnahmekategorien. Erstelle eine, um zu beginnen.",
       "noExpense": "Noch keine Ausgabenkategorien. Erstelle eine, um zu beginnen."
+    },
+    "accounts": {
+      "title": "Konten",
+      "description": "Verwalte deine Bankkonten, Bargeld und Kreditkarten",
+      "addNew": "Konto hinzufügen",
+      "createAccount": "Konto erstellen",
+      "editAccount": "Konto bearbeiten",
+      "createDescription": "Füge ein neues Konto hinzu, um deine Finanzen zu verfolgen",
+      "editDescription": "Kontodetails aktualisieren",
+      "name": "Kontoname",
+      "namePlaceholder": "z.B. Sparkasse Girokonto",
+      "type": "Kontotyp",
+      "initialBalance": "Anfangssaldo",
+      "currentBalance": "Aktueller Saldo",
+      "save": "Änderungen speichern",
+      "create": "Konto erstellen",
+      "delete": "Löschen",
+      "deleteTitle": "Konto löschen?",
+      "deleteDescription": "Bist du sicher, dass du \"{name}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "noAccounts": "Noch keine Konten. Erstelle eines, um zu beginnen.",
+      "balance": "Saldo",
+      "createSuccess": "Konto erfolgreich erstellt",
+      "updateSuccess": "Konto erfolgreich aktualisiert",
+      "deleteSuccess": "Konto erfolgreich gelöscht",
+      "types": {
+        "cash": "Bargeld",
+        "bank": "Bankkonto",
+        "credit": "Kreditkarte",
+        "savings": "Sparkonto"
+      }
+    }
+  },
+  "budget": {
+    "title": "Budget",
+    "safeToSpend": "Verfügbar zum Ausgeben",
+    "totalLiquid": "Gesamtes Barguthaben",
+    "monthlyCommitted": "Monatlich gebunden",
+    "breakdown": "Aufschlüsselung",
+    "budgetType": "Budget-Typ",
+    "targetAmount": "Zielbetrag",
+    "frequency": "Frequenz",
+    "monthlyTarget": "Monatliches Ziel",
+    "types": {
+      "variable": "Variabel (Kein Budget)",
+      "fixed": "Fest wiederkehrend",
+      "sinking_fund": "Ansparfonds"
+    },
+    "frequencies": {
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "semi_annual": "Halbjährlich",
+      "annual": "Jährlich"
+    },
+    "descriptions": {
+      "variable": "Kein Budget-Tracking für diese Kategorie",
+      "fixed": "Regelmäßige wiederkehrende Ausgabe (z.B. Miete, Abonnements)",
+      "sinking_fund": "Sparziel für zukünftige Ausgabe (z.B. Urlaub, Auto)"
     }
   }
 }

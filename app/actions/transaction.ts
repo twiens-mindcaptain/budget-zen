@@ -235,3 +235,89 @@ export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
     throw error
   }
 }
+
+/**
+ * Calculate Safe-to-Spend amount
+ * Formula: Total Liquid Cash - Monthly Committed
+ */
+export async function getSafeToSpend(): Promise<{
+  safeToSpend: string
+  totalLiquid: string
+  monthlyCommitted: string
+}> {
+  try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // 1. Calculate Total Liquid Cash (sum of all account balances)
+    // Get all accounts
+    const { data: accounts, error: accountsError } = await getServerSupabase()
+      .from('accounts')
+      .select('id, initial_balance')
+      .eq('user_id', userId)
+
+    if (accountsError) {
+      console.error('Error fetching accounts:', accountsError)
+      throw new Error('Failed to fetch accounts')
+    }
+
+    let totalLiquid = 0
+
+    // For each account, calculate current balance (initial_balance + transactions sum)
+    if (accounts && accounts.length > 0) {
+      for (const account of accounts) {
+        const initialBalance = parseFloat(account.initial_balance)
+
+        // Get sum of transactions for this account
+        const { data: transactions, error: transError } = await getServerSupabase()
+          .from('transactions')
+          .select('amount')
+          .eq('account_id', account.id)
+          .eq('user_id', userId)
+
+        if (transError) {
+          console.error('Error fetching transactions:', transError)
+          continue
+        }
+
+        const transactionsSum = (transactions || []).reduce(
+          (sum, t) => sum + parseFloat(t.amount),
+          0
+        )
+
+        totalLiquid += initialBalance + transactionsSum
+      }
+    }
+
+    // 2. Calculate Monthly Committed (sum of monthly_target for fixed/sinking_fund categories)
+    const { data: categories, error: categoriesError } = await getServerSupabase()
+      .from('categories')
+      .select('monthly_target')
+      .eq('user_id', userId)
+      .in('budget_type', ['fixed', 'sinking_fund'])
+
+    if (categoriesError) {
+      console.error('Error fetching categories:', categoriesError)
+      throw new Error('Failed to fetch categories')
+    }
+
+    const monthlyCommitted = (categories || []).reduce((sum, cat) => {
+      return sum + (cat.monthly_target ? parseFloat(cat.monthly_target) : 0)
+    }, 0)
+
+    // 3. Calculate Safe to Spend
+    const safeToSpend = totalLiquid - monthlyCommitted
+
+    return {
+      safeToSpend: safeToSpend.toFixed(2),
+      totalLiquid: totalLiquid.toFixed(2),
+      monthlyCommitted: monthlyCommitted.toFixed(2),
+    }
+  } catch (error) {
+    console.error('Error in getSafeToSpend:', error)
+    throw error
+  }
+}

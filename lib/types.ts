@@ -23,6 +23,9 @@ export interface Account {
   created_at: string
 }
 
+export type BudgetType = 'variable' | 'fixed' | 'sinking_fund'
+export type BudgetFrequency = 'monthly' | 'quarterly' | 'semi_annual' | 'annual'
+
 export interface Category {
   id: string // uuid
   user_id: string
@@ -31,6 +34,10 @@ export interface Category {
   icon: string | null // Emoji or Lucide icon name
   color: string | null // Hex code
   type: CategoryType
+  budget_type: BudgetType // Budget tracking type
+  target_amount: string | null // Target amount for fixed/sinking_fund budgets (decimal)
+  frequency: BudgetFrequency // Budget frequency
+  monthly_target: string | null // Calculated monthly target (decimal)
   created_at: string
 }
 
@@ -83,6 +90,7 @@ export const insertAccountSchema = z.object({
   type: z.enum(['cash', 'bank', 'credit', 'savings']),
   initial_balance: z
     .string()
+    .optional()
     .default('0.00')
     .refine(
       (val) => {
@@ -105,6 +113,9 @@ export const insertCategorySchema = z.object({
   icon: z.string().optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Color must be a valid hex code').optional(),
   type: z.enum(['income', 'expense']),
+  budget_type: z.enum(['variable', 'fixed', 'sinking_fund']).default('variable'),
+  target_amount: z.string().optional().nullable(),
+  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']).default('monthly'),
 })
 
 export type InsertCategoryInput = z.infer<typeof insertCategorySchema>

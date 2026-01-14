@@ -2,28 +2,11 @@ import { SignedIn } from '@clerk/nextjs'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import { Suspense } from 'react'
 import { SettingsLayout } from '@/components/settings/settings-layout'
-import { CategoriesTab } from '@/components/settings/categories-tab'
+import { SettingsTabs } from '@/components/settings/settings-tabs'
 import { getUserCategories } from '@/app/actions/categories'
-import { Loader2 } from 'lucide-react'
-
-// Loading component for categories
-function CategoriesLoading() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
-      </div>
-    </div>
-  )
-}
-
-// Async component for categories
-async function CategoriesContent() {
-  const categories = await getUserCategories()
-  return <CategoriesTab initialCategories={categories} />
-}
+import { getAccountsWithBalances } from '@/app/actions/accounts'
+import { getUserProfile } from '@/app/actions/seed'
 
 export default async function SettingsPage() {
   const { userId } = await auth()
@@ -33,6 +16,13 @@ export default async function SettingsPage() {
   }
 
   const t = await getTranslations()
+
+  // Fetch all data server-side
+  const [categories, accounts, profile] = await Promise.all([
+    getUserCategories(),
+    getAccountsWithBalances(),
+    getUserProfile(),
+  ])
 
   return (
     <SignedIn>
@@ -47,9 +37,11 @@ export default async function SettingsPage() {
             </p>
           </div>
 
-          <Suspense fallback={<CategoriesLoading />}>
-            <CategoriesContent />
-          </Suspense>
+          <SettingsTabs
+            categories={categories}
+            accounts={accounts}
+            currency={profile.currency}
+          />
         </div>
       </SettingsLayout>
     </SignedIn>

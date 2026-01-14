@@ -13,9 +13,32 @@ const categorySchema = z.object({
   icon: z.string().min(1, 'Icon is required'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
   type: z.enum(['income', 'expense']),
+  budget_type: z.enum(['variable', 'fixed', 'sinking_fund']).default('variable'),
+  target_amount: z.string().optional().nullable(),
+  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']).default('monthly'),
 })
 
 export type CategoryFormData = z.infer<typeof categorySchema>
+
+/**
+ * Helper function to calculate monthly_target based on target_amount and frequency
+ */
+function calculateMonthlyTarget(targetAmount: string | null | undefined, frequency: string): string | null {
+  if (!targetAmount || targetAmount === '') return null
+
+  const amount = parseFloat(targetAmount)
+  if (isNaN(amount)) return null
+
+  const divisors = {
+    monthly: 1,
+    quarterly: 3,
+    semi_annual: 6,
+    annual: 12,
+  }
+
+  const divisor = divisors[frequency as keyof typeof divisors] || 1
+  return (amount / divisor).toFixed(2)
+}
 
 /**
  * Get all categories for the current user
@@ -62,12 +85,16 @@ export async function createCategory(data: CategoryFormData) {
     // Validate input
     const validated = categorySchema.parse(data)
 
+    // Calculate monthly_target
+    const monthly_target = calculateMonthlyTarget(validated.target_amount, validated.frequency)
+
     // Insert category
     const { error } = await getServerSupabase()
       .from('categories')
       .insert({
         user_id: userId,
         ...validated,
+        monthly_target,
       })
 
     if (error) {
@@ -117,10 +144,16 @@ export async function updateCategory(id: string, data: CategoryFormData) {
     // Validate input
     const validated = categorySchema.parse(data)
 
+    // Calculate monthly_target
+    const monthly_target = calculateMonthlyTarget(validated.target_amount, validated.frequency)
+
     // Update category (only if it belongs to the user)
     const { error } = await getServerSupabase()
       .from('categories')
-      .update(validated)
+      .update({
+        ...validated,
+        monthly_target,
+      })
       .eq('id', id)
       .eq('user_id', userId)
 

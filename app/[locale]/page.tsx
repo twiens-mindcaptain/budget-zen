@@ -2,7 +2,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
 import { format } from 'date-fns'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { QuickAddDialog } from '@/components/transactions/quick-add-dialog'
-import { getRecentTransactions, getAccounts, getCategories, getMonthlyStatistics } from '@/app/actions/transaction'
+import { getRecentTransactions, getAccounts, getCategories, getMonthlyStatistics, getSafeToSpend } from '@/app/actions/transaction'
 import { seedUserDefaults, getUserProfile } from '@/app/actions/seed'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { formatCurrency } from '@/lib/currency'
@@ -51,11 +51,12 @@ async function Dashboard() {
   await seedUserDefaults()
 
   // Fetch data server-side
-  const [transactions, accounts, categories, statistics, profile] = await Promise.all([
+  const [transactions, accounts, categories, statistics, safeToSpendData, profile] = await Promise.all([
     getRecentTransactions(50),
     getAccounts(),
     getCategories(),
     getMonthlyStatistics(),
+    getSafeToSpend(),
     getUserProfile(),
   ])
 
@@ -85,7 +86,12 @@ async function Dashboard() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Monthly Statistics */}
         <div className="mb-6">
-          <SummaryCards statistics={statistics} currency={profile.currency} locale={fullLocale} />
+          <SummaryCards
+            statistics={statistics}
+            safeToSpendData={safeToSpendData}
+            currency={profile.currency}
+            locale={fullLocale}
+          />
         </div>
 
         {/* Quick Add Section */}

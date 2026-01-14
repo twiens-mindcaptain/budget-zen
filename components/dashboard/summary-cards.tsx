@@ -7,37 +7,51 @@ import { formatCurrency } from '@/lib/currency'
 
 interface SummaryCardsProps {
   statistics: MonthlyStatistics
+  safeToSpendData: {
+    safeToSpend: string
+    totalLiquid: string
+    monthlyCommitted: string
+  }
   currency: string
   locale: string
 }
 
-export function SummaryCards({ statistics, currency, locale }: SummaryCardsProps) {
+export function SummaryCards({ statistics, safeToSpendData, currency, locale }: SummaryCardsProps) {
   const t = useTranslations()
   const income = parseFloat(statistics.income)
   const expenses = parseFloat(statistics.expenses)
   const balance = parseFloat(statistics.balance)
+  const safeToSpend = parseFloat(safeToSpendData.safeToSpend)
+  const totalLiquid = parseFloat(safeToSpendData.totalLiquid)
+  const monthlyCommitted = parseFloat(safeToSpendData.monthlyCommitted)
 
-  const isNegative = balance < 0
+  const isNegativeSafeToSpend = safeToSpend < 0
 
   return (
     <div className="grid gap-3 md:grid-cols-3">
-      {/* Balance Card - Prominent */}
+      {/* Safe to Spend Card - Prominent */}
       <div className="md:col-span-3 bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <div className="text-sm font-medium text-zinc-500">
-            {t('statistics.balance')}
+            {t('budget.safeToSpend')}
           </div>
           <Wallet className="h-4 w-4 text-zinc-400" />
         </div>
         <div
           className={`text-4xl font-bold tabular-nums ${
-            isNegative ? 'text-red-600' : 'text-emerald-600'
+            isNegativeSafeToSpend ? 'text-red-600' : 'text-emerald-600'
           }`}
         >
-          {formatCurrency(Math.abs(balance), currency, isNegative ? '-' : '+', locale)}
+          {formatCurrency(
+            Math.abs(safeToSpend),
+            currency,
+            isNegativeSafeToSpend ? '-' : '',
+            locale
+          )}
         </div>
-        <p className="text-sm text-zinc-500 mt-1">
-          {isNegative ? t('statistics.overBudget') : t('statistics.remaining')}
+        <p className="text-xs text-zinc-500 mt-2">
+          {formatCurrency(totalLiquid, currency, '', locale)} {t('budget.totalLiquid')} -{' '}
+          {formatCurrency(monthlyCommitted, currency, '', locale)} {t('budget.monthlyCommitted')}
         </p>
       </div>
 

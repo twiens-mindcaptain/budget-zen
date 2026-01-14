@@ -16,6 +16,10 @@ interface Category {
   icon: string
   color: string
   type: 'income' | 'expense'
+  budget_type?: string
+  target_amount?: string | null
+  frequency?: string
+  monthly_target?: string | null
 }
 
 interface CategoriesTabProps {

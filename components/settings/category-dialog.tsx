@@ -25,6 +25,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { IconPicker } from '@/components/settings/icon-picker'
 import { ColorPicker } from '@/components/settings/color-picker'
 import { getCategoryDisplayName } from '@/lib/i18n-helpers'
@@ -36,6 +43,9 @@ const formSchema = z.object({
   icon: z.string().min(1, 'Icon is required'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color'),
   type: z.enum(['income', 'expense']),
+  budget_type: z.enum(['variable', 'fixed', 'sinking_fund']),
+  target_amount: z.string().optional(),
+  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -47,6 +57,9 @@ interface Category {
   icon: string
   color: string
   type: 'income' | 'expense'
+  budget_type?: string
+  target_amount?: string | null
+  frequency?: string
 }
 
 interface CategoryDialogProps {
@@ -73,8 +86,15 @@ export function CategoryDialog({
       icon: category?.icon || 'ShoppingCart',
       color: category?.color || '#10b981',
       type: category?.type || 'expense',
+      budget_type: (category?.budget_type as 'variable' | 'fixed' | 'sinking_fund') || 'variable',
+      target_amount: category?.target_amount || '',
+      frequency: (category?.frequency as 'monthly' | 'quarterly' | 'semi_annual' | 'annual') || 'monthly',
     },
   })
+
+  // Watch budget_type to conditionally show/hide fields
+  const budgetType = form.watch('budget_type')
+  const showBudgetFields = budgetType === 'fixed' || budgetType === 'sinking_fund'
 
   // Reset form when category changes
   useEffect(() => {
@@ -84,6 +104,9 @@ export function CategoryDialog({
         icon: category.icon,
         color: category.color,
         type: category.type,
+        budget_type: (category.budget_type as 'variable' | 'fixed' | 'sinking_fund') || 'variable',
+        target_amount: category.target_amount || '',
+        frequency: (category.frequency as 'monthly' | 'quarterly' | 'semi_annual' | 'annual') || 'monthly',
       })
     } else {
       form.reset({
@@ -91,6 +114,9 @@ export function CategoryDialog({
         icon: 'ShoppingCart',
         color: '#10b981',
         type: 'expense',
+        budget_type: 'variable',
+        target_amount: '',
+        frequency: 'monthly',
       })
     }
   }, [category, form, t])
@@ -226,6 +252,96 @@ export function CategoryDialog({
                 </FormItem>
               )}
             />
+
+            {/* Budget Type */}
+            <FormField
+              control={form.control}
+              name="budget_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('budget.budgetType')}</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('budget.budgetType')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="variable">
+                        {t('budget.types.variable')}
+                      </SelectItem>
+                      <SelectItem value="fixed">
+                        {t('budget.types.fixed')}
+                      </SelectItem>
+                      <SelectItem value="sinking_fund">
+                        {t('budget.types.sinking_fund')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {t(`budget.descriptions.${field.value}`)}
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Target Amount (conditional) */}
+            {showBudgetFields && (
+              <FormField
+                control={form.control}
+                name="target_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('budget.targetAmount')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Frequency (conditional) */}
+            {showBudgetFields && (
+              <FormField
+                control={form.control}
+                name="frequency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('budget.frequency')}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('budget.frequency')} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="monthly">
+                          {t('budget.frequencies.monthly')}
+                        </SelectItem>
+                        <SelectItem value="quarterly">
+                          {t('budget.frequencies.quarterly')}
+                        </SelectItem>
+                        <SelectItem value="semi_annual">
+                          {t('budget.frequencies.semi_annual')}
+                        </SelectItem>
+                        <SelectItem value="annual">
+                          {t('budget.frequencies.annual')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button
