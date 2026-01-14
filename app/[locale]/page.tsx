@@ -1,16 +1,9 @@
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
-import { format } from 'date-fns'
 import { getTranslations, getLocale } from 'next-intl/server'
-import { QuickAddDialog } from '@/components/transactions/quick-add-dialog'
-import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
-import { DeleteTransactionDialog } from '@/components/transactions/delete-transaction-dialog'
+import { DashboardContent } from '@/components/dashboard/dashboard-content'
 import { getRecentTransactions, getAccounts, getCategories, getMonthlyStatistics, getSafeToSpend } from '@/app/actions/transaction'
 import { seedUserDefaults, getUserProfile } from '@/app/actions/seed'
-import { SummaryCards } from '@/components/dashboard/summary-cards'
-import { formatCurrency } from '@/lib/currency'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { getCategoryIcon } from '@/lib/icon-mapper'
-import { getCategoryDisplayName } from '@/lib/i18n-helpers'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
 
@@ -86,134 +79,15 @@ async function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Monthly Statistics */}
-        <div className="mb-6">
-          <SummaryCards
-            statistics={statistics}
-            safeToSpendData={safeToSpendData}
-            currency={profile.currency}
-            locale={fullLocale}
-          />
-        </div>
-
-        {/* Quick Add Section */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-medium text-zinc-900">{t('dashboard.transactions')}</h2>
-            <p className="text-sm text-zinc-500 mt-0.5">
-              {t('dashboard.pressNToAdd', { key: 'N' }).split('N')[0]}
-              <kbd className="mx-1 px-1.5 py-0.5 text-xs bg-zinc-100 text-zinc-700 border border-zinc-300 rounded font-mono">
-                N
-              </kbd>
-              {t('dashboard.pressNToAdd', { key: 'N' }).split('N')[1]}
-            </p>
-          </div>
-          <QuickAddDialog accounts={accounts} categories={categories} />
-        </div>
-
-        {/* Empty State */}
-        {transactions.length === 0 ? (
-          <div className="bg-white rounded-xl border border-zinc-200 p-12 text-center shadow-sm">
-            <div className="max-w-sm mx-auto space-y-4">
-              <div className="text-zinc-400 text-5xl">💰</div>
-              <h3 className="text-lg font-medium text-zinc-900">{t('dashboard.noTransactionsYet')}</h3>
-              <p className="text-sm text-zinc-500">
-                {t('dashboard.getStarted')}
-              </p>
-            </div>
-          </div>
-        ) : (
-          /* Transaction Feed - Card List */
-          <div className="space-y-2">
-            {transactions.map((transaction: any) => {
-              const isIncome = transaction.category?.type === 'income'
-              const amount = parseFloat(transaction.amount)
-              const CategoryIcon = getCategoryIcon(transaction.category?.icon)
-
-              return (
-                <div
-                  key={transaction.id}
-                  className="group bg-white rounded-xl border border-zinc-200 p-4 hover:bg-zinc-50/50 transition-colors shadow-sm"
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Icon */}
-                    <div className="flex-shrink-0">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{
-                          backgroundColor: transaction.category?.color
-                            ? `${transaction.category.color}15`
-                            : '#f4f4f5'
-                        }}
-                      >
-                        <CategoryIcon
-                          className="w-5 h-5"
-                          style={{
-                            color: transaction.category?.color || '#71717a'
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Middle: Category, Account, Date */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-zinc-900">
-                        {transaction.category
-                          ? getCategoryDisplayName(transaction.category, t)
-                          : t('transaction.uncategorized')
-                        }
-                      </div>
-                      <div className="text-sm text-zinc-500 flex items-center gap-1.5">
-                        <span className="truncate">{transaction.account?.name || 'Unknown'}</span>
-                        <span>•</span>
-                        <span className="whitespace-nowrap">
-                          {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                        </span>
-                      </div>
-                      {transaction.note && (
-                        <div className="text-sm text-zinc-500 mt-1 truncate">
-                          {transaction.note}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right: Amount and Actions */}
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      <div className="text-right">
-                        <div
-                          className={`text-lg font-semibold tabular-nums ${
-                            isIncome ? 'text-emerald-600' : 'text-zinc-900'
-                          }`}
-                        >
-                          {formatCurrency(
-                            amount,
-                            profile.currency,
-                            isIncome ? '+' : '-',
-                            fullLocale
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Edit and Delete Buttons */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <EditTransactionDialog
-                          transaction={transaction}
-                          accounts={accounts}
-                          categories={categories}
-                        />
-                        <DeleteTransactionDialog
-                          transaction={transaction}
-                          currency={profile.currency}
-                          locale={fullLocale}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <DashboardContent
+          initialTransactions={transactions}
+          initialStatistics={statistics}
+          initialSafeToSpend={safeToSpendData}
+          accounts={accounts}
+          categories={categories}
+          currency={profile.currency}
+          locale={fullLocale}
+        />
       </main>
     </div>
   )

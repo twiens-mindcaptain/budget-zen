@@ -24,9 +24,10 @@ interface DeleteTransactionDialogProps {
   transaction: any // Full transaction object with category and account data
   currency: string
   locale: string
+  onOptimisticDelete?: (id: string) => void
 }
 
-export function DeleteTransactionDialog({ transaction, currency, locale }: DeleteTransactionDialogProps) {
+export function DeleteTransactionDialog({ transaction, currency, locale, onOptimisticDelete }: DeleteTransactionDialogProps) {
   const t = useTranslations()
   const [open, setOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -35,18 +36,36 @@ export function DeleteTransactionDialog({ transaction, currency, locale }: Delet
     setIsDeleting(true)
 
     try {
+      // Optimistically remove from UI before server responds
+      if (onOptimisticDelete) {
+        onOptimisticDelete(transaction.id)
+        // Close dialog immediately for better UX
+        setOpen(false)
+      }
+
       const result = await deleteTransaction(transaction.id)
 
       if (result.success) {
-        setOpen(false)
+        // Dialog already closed if optimistic delete was used
+        if (!onOptimisticDelete) {
+          setOpen(false)
+        }
       } else {
         // Show error (you could use a toast notification here)
         console.error('Transaction deletion failed:', result.error)
         alert(result.error)
+        // Reopen dialog if there was an error
+        if (onOptimisticDelete) {
+          setOpen(true)
+        }
       }
     } catch (error) {
       console.error('Unexpected error:', error)
       alert('An unexpected error occurred')
+      // Reopen dialog if there was an error
+      if (onOptimisticDelete) {
+        setOpen(true)
+      }
     } finally {
       setIsDeleting(false)
     }

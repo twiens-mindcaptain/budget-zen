@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useOptimistic } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -28,15 +28,33 @@ interface CategoriesTabProps {
 
 export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
   const t = useTranslations()
-  const [categories, setCategories] = useState(initialCategories)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
+  type CategoryAction =
+    | { type: 'create'; category: Category }
+    | { type: 'update'; category: Category }
+    | { type: 'delete'; id: string }
+
+  const [optimisticCategories, updateOptimisticCategories] = useOptimistic(
+    initialCategories,
+    (state: Category[], action: CategoryAction) => {
+      if (action.type === 'create') {
+        return [...state, action.category]
+      } else if (action.type === 'update') {
+        return state.map((c) => (c.id === action.category.id ? action.category : c))
+      } else if (action.type === 'delete') {
+        return state.filter((c) => c.id !== action.id)
+      }
+      return state
+    }
+  )
+
   // Separate categories by type
-  const incomeCategories = categories.filter((c) => c.type === 'income')
-  const expenseCategories = categories.filter((c) => c.type === 'expense')
+  const incomeCategories = optimisticCategories.filter((c) => c.type === 'income')
+  const expenseCategories = optimisticCategories.filter((c) => c.type === 'expense')
 
   const handleEditClick = (category: Category) => {
     setSelectedCategory(category)
@@ -49,20 +67,18 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
   }
 
   const handleCategoryCreated = (newCategory: Category) => {
-    setCategories([...categories, newCategory])
+    updateOptimisticCategories({ type: 'create', category: newCategory })
     setIsCreateDialogOpen(false)
   }
 
   const handleCategoryUpdated = (updatedCategory: Category) => {
-    setCategories(
-      categories.map((c) => (c.id === updatedCategory.id ? updatedCategory : c))
-    )
+    updateOptimisticCategories({ type: 'update', category: updatedCategory })
     setIsEditDialogOpen(false)
     setSelectedCategory(null)
   }
 
   const handleCategoryDeleted = (deletedId: string) => {
-    setCategories(categories.filter((c) => c.id !== deletedId))
+    updateOptimisticCategories({ type: 'delete', id: deletedId })
     setIsDeleteDialogOpen(false)
     setSelectedCategory(null)
   }

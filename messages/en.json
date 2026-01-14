@@ -51,6 +51,7 @@
     "income": "Income",
     "expense": "Expense",
     "uncategorized": "Uncategorized",
+    "formatExample": "Format example",
     "editTransaction": "Edit Transaction",
     "editDescription": "Update transaction details",
     "saveChanges": "Save Changes",

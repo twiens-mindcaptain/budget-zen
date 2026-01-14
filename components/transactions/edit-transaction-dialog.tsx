@@ -35,14 +35,18 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { updateTransaction } from '@/app/actions/transaction'
 import { insertTransactionSchema, type InsertTransactionInput, type Account, type Category } from '@/lib/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface EditTransactionDialogProps {
   transaction: any // Full transaction object with category and account data
   accounts: Account[]
   categories: Category[]
+  currency: string
+  locale: string
+  onOptimisticUpdate?: (transaction: any) => void
 }
 
-export function EditTransactionDialog({ transaction, accounts, categories }: EditTransactionDialogProps) {
+export function EditTransactionDialog({ transaction, accounts, categories, currency, locale, onOptimisticUpdate }: EditTransactionDialogProps) {
   const t = useTranslations()
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -50,6 +54,9 @@ export function EditTransactionDialog({ transaction, accounts, categories }: Edi
     transaction.category?.type || 'expense'
   )
   const amountInputRef = useRef<HTMLInputElement>(null)
+
+  // Generate example formatted amount for helper text
+  const exampleAmount = formatCurrency(1234.56, currency, '', locale)
 
   // Parse the amount to remove any prefix
   const parseAmount = (amount: string | number) => {
@@ -148,22 +155,68 @@ export function EditTransactionDialog({ transaction, accounts, categories }: Edi
         amount: data.amount.replace(',', '.'),
       }
 
+      // Find the selected category to get full category info
+      const selectedCategory = categories.find(cat => cat.id === normalizedData.category_id)
+      const selectedAccount = accounts.find(acc => acc.id === normalizedData.account_id)
+
+      // Optimistically update UI before server responds
+      if (onOptimisticUpdate) {
+        // Calculate signed amount based on category type or + prefix
+        let finalAmount = Math.abs(parseFloat(normalizedData.amount))
+
+        if (selectedCategory) {
+          // Income = positive, Expense = negative
+          if (selectedCategory.type === 'expense') {
+            finalAmount = -finalAmount
+          }
+        } else {
+          // No category: check if amount starts with + (income) or treat as expense
+          const amountStr = normalizedData.amount.toString()
+          if (!amountStr.startsWith('+')) {
+            // Default: treat as expense (negative)
+            finalAmount = -finalAmount
+          }
+        }
+
+        const optimisticTransaction = {
+          ...transaction,
+          ...normalizedData,
+          amount: finalAmount.toString(),
+          category: selectedCategory || null,
+          account: selectedAccount || null,
+        }
+        onOptimisticUpdate(optimisticTransaction)
+        // Close dialog immediately for better UX
+        setOpen(false)
+      }
+
       const result = await updateTransaction(transaction.id, normalizedData)
 
       if (result.success) {
-        setOpen(false)
+        // Dialog already closed if optimistic update was used
+        if (!onOptimisticUpdate) {
+          setOpen(false)
+        }
       } else {
         // Show error (you could use a toast notification here)
         console.error('Transaction update failed:', result.error)
         alert(result.error)
+        // Reopen dialog if there was an error
+        if (onOptimisticUpdate) {
+          setOpen(true)
+        }
       }
     } catch (error) {
       console.error('Unexpected error:', error)
       alert('An unexpected error occurred')
+      // Reopen dialog if there was an error
+      if (onOptimisticUpdate) {
+        setOpen(true)
+      }
     } finally {
       setIsSubmitting(false)
     }
-  }, [transaction.id])
+  }, [transaction, categories, accounts, onOptimisticUpdate])
 
   const onSubmit = (data: InsertTransactionInput) => {
     handleSubmit(data)
@@ -215,9 +268,14 @@ export function EditTransactionDialog({ transaction, accounts, categories }: Edi
                       className="text-lg font-semibold"
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {transactionType === 'income' ? `💚 ${t('transaction.income')}` : `💸 ${t('transaction.expense')}`}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {transactionType === 'income' ? `💚 ${t('transaction.income')}` : `💸 ${t('transaction.expense')}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('transaction.formatExample')}: {exampleAmount}
+                    </p>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

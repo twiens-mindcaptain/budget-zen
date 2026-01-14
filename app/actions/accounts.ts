@@ -63,7 +63,7 @@ export async function getAccountBalance(accountId: string): Promise<string> {
     return account.initial_balance
   }
 
-  // Calculate total balance
+  // Calculate total balance: simply sum all amounts (negative for expenses, positive for income)
   const initialBalance = parseFloat(account.initial_balance)
   const transactionsSum = (transactions || []).reduce((sum, t) => sum + parseFloat(t.amount), 0)
   const totalBalance = initialBalance + transactionsSum

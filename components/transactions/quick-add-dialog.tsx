@@ -35,18 +35,25 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { createTransaction } from '@/app/actions/transaction'
 import { insertTransactionSchema, type InsertTransactionInput, type Account, type Category } from '@/lib/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface QuickAddDialogProps {
   accounts: Account[]
   categories: Category[]
+  currency: string
+  locale: string
+  onOptimisticCreate?: (transaction: any) => void
 }
 
-export function QuickAddDialog({ accounts, categories }: QuickAddDialogProps) {
+export function QuickAddDialog({ accounts, categories, currency, locale, onOptimisticCreate }: QuickAddDialogProps) {
   const t = useTranslations()
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense')
   const amountInputRef = useRef<HTMLInputElement>(null)
+
+  // Generate example formatted amount for helper text
+  const exampleAmount = formatCurrency(1234.56, currency, '', locale)
 
   // Global keyboard shortcut to open the dialog from anywhere on the page
   useEffect(() => {
@@ -158,10 +165,40 @@ export function QuickAddDialog({ accounts, categories }: QuickAddDialogProps) {
         amount: data.amount.replace(',', '.'),
       }
 
-      const result = await createTransaction(normalizedData)
+      // Create optimistic transaction for instant UI update
+      if (onOptimisticCreate) {
+        // Calculate signed amount based on category type or + prefix
+        let finalAmount = Math.abs(parseFloat(normalizedData.amount))
+        const selectedCategory = categories.find(c => c.id === data.category_id)
+        const selectedAccount = accounts.find(a => a.id === data.account_id)
 
-      if (result.success) {
-        // Reset form for next entry
+        if (selectedCategory) {
+          // Income = positive, Expense = negative
+          if (selectedCategory.type === 'expense') {
+            finalAmount = -finalAmount
+          }
+        } else {
+          // No category: check if amount starts with + (income) or treat as expense
+          const amountStr = normalizedData.amount.toString()
+          if (!amountStr.startsWith('+')) {
+            finalAmount = -finalAmount
+          }
+        }
+
+        const optimisticTransaction = {
+          id: `temp-${Date.now()}`, // Temporary ID
+          amount: finalAmount.toString(),
+          date: data.date || new Date().toISOString(),
+          note: data.note || null,
+          account_id: data.account_id,
+          category_id: data.category_id || null,
+          category: selectedCategory || null,
+          account: selectedAccount || null,
+        }
+
+        onOptimisticCreate(optimisticTransaction)
+
+        // Reset form immediately
         form.reset({
           account_id: data.account_id, // Keep same account
           category_id: '', // Clear category
@@ -170,7 +207,7 @@ export function QuickAddDialog({ accounts, categories }: QuickAddDialogProps) {
           note: '',
         })
 
-        // If not keeping open, close the dialog
+        // If not keeping open, close the dialog immediately
         if (!keepOpen) {
           setOpen(false)
         } else {
@@ -179,7 +216,12 @@ export function QuickAddDialog({ accounts, categories }: QuickAddDialogProps) {
             amountInputRef.current?.focus()
           }, 100)
         }
-      } else {
+      }
+
+      // Submit to server in background
+      const result = await createTransaction(normalizedData)
+
+      if (!result.success) {
         // Show error (you could use a toast notification here)
         console.error('Transaction creation failed:', result.error)
         alert(result.error)
@@ -190,7 +232,7 @@ export function QuickAddDialog({ accounts, categories }: QuickAddDialogProps) {
     } finally {
       setIsSubmitting(false)
     }
-  }, [form, setOpen])
+  }, [form, setOpen, onOptimisticCreate, categories, accounts])
 
   // Keyboard handler for Cmd+Enter inside the dialog
   useEffect(() => {
@@ -286,9 +328,14 @@ export function QuickAddDialog({ accounts, categories }: QuickAddDialogProps) {
                       className="text-lg font-semibold"
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {transactionType === 'income' ? `💚 ${t('transaction.income')}` : `💸 ${t('transaction.expense')}`}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {transactionType === 'income' ? `💚 ${t('transaction.income')}` : `💸 ${t('transaction.expense')}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('transaction.formatExample')}: {exampleAmount}
+                    </p>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

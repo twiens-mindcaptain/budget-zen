@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useOptimistic } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, Pencil, Trash2, Wallet, CreditCard, Landmark, PiggyBank } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -41,11 +41,33 @@ const accountColors = {
 export function AccountsTab({ initialAccounts, currency }: AccountsTabProps) {
   const t = useTranslations()
   const locale = useLocale()
-  const [accounts, setAccounts] = useState(initialAccounts)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  type AccountAction =
+    | { type: 'create'; account: Account }
+    | { type: 'update'; account: Account }
+    | { type: 'delete'; id: string }
+
+  const [optimisticAccounts, updateOptimisticAccounts] = useOptimistic(
+    initialAccounts,
+    (state: Account[], action: AccountAction) => {
+      if (action.type === 'create') {
+        return [...state, { ...action.account, current_balance: action.account.initial_balance }]
+      } else if (action.type === 'update') {
+        return state.map((a) =>
+          a.id === action.account.id
+            ? { ...action.account, current_balance: a.current_balance }
+            : a
+        )
+      } else if (action.type === 'delete') {
+        return state.filter((a) => a.id !== action.id)
+      }
+      return state
+    }
+  )
 
   const handleEditClick = (account: Account) => {
     setSelectedAccount(account)
@@ -58,24 +80,18 @@ export function AccountsTab({ initialAccounts, currency }: AccountsTabProps) {
   }
 
   const handleAccountCreated = (newAccount: Account) => {
-    setAccounts([...accounts, { ...newAccount, current_balance: newAccount.initial_balance }])
+    updateOptimisticAccounts({ type: 'create', account: newAccount })
     setIsCreateDialogOpen(false)
   }
 
   const handleAccountUpdated = (updatedAccount: Account) => {
-    setAccounts(
-      accounts.map((a) =>
-        a.id === updatedAccount.id
-          ? { ...updatedAccount, current_balance: a.current_balance }
-          : a
-      )
-    )
+    updateOptimisticAccounts({ type: 'update', account: updatedAccount })
     setIsEditDialogOpen(false)
     setSelectedAccount(null)
   }
 
   const handleAccountDeleted = (deletedId: string) => {
-    setAccounts(accounts.filter((a) => a.id !== deletedId))
+    updateOptimisticAccounts({ type: 'delete', id: deletedId })
     setIsDeleteDialogOpen(false)
     setSelectedAccount(null)
   }
@@ -159,8 +175,8 @@ export function AccountsTab({ initialAccounts, currency }: AccountsTabProps) {
 
       {/* Accounts Grid */}
       <div className="grid gap-3 md:grid-cols-2">
-        {accounts.map(renderAccountCard)}
-        {accounts.length === 0 && (
+        {optimisticAccounts.map(renderAccountCard)}
+        {optimisticAccounts.length === 0 && (
           <div className="col-span-2 text-center py-8 text-zinc-500 text-sm">
             {t('settings.accounts.noAccounts')}
           </div>

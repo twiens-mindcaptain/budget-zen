@@ -51,6 +51,7 @@
     "income": "Einnahme",
     "expense": "Ausgabe",
     "uncategorized": "Ohne Kategorie",
+    "formatExample": "Format-Beispiel",
     "editTransaction": "Transaktion bearbeiten",
     "editDescription": "Transaktionsdetails aktualisieren",
     "saveChanges": "Änderungen speichern",

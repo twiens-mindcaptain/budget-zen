@@ -41,6 +41,30 @@ export async function createTransaction(
 
     const validatedData = validationResult.data
 
+    // Determine transaction type and normalize amount with sign
+    let finalAmount = Math.abs(parseFloat(validatedData.amount))
+
+    if (validatedData.category_id) {
+      // If category is selected, determine type from category
+      const { data: category } = await getServerSupabase()
+        .from('categories')
+        .select('type')
+        .eq('id', validatedData.category_id)
+        .single()
+
+      // Income = positive, Expense = negative
+      if (category?.type === 'expense') {
+        finalAmount = -finalAmount
+      }
+    } else {
+      // No category: check if amount starts with + (income) or treat as expense
+      const amountStr = validatedData.amount.toString()
+      if (!amountStr.startsWith('+')) {
+        // Default: treat as expense (negative)
+        finalAmount = -finalAmount
+      }
+    }
+
     // 3. Insert into Supabase transactions table
     const { data: transaction, error: insertError } = await getServerSupabase()
       .from('transactions')
@@ -48,7 +72,7 @@ export async function createTransaction(
         user_id: userId,
         account_id: validatedData.account_id,
         category_id: validatedData.category_id || null,
-        amount: validatedData.amount,
+        amount: finalAmount.toString(),
         date: validatedData.date || new Date().toISOString(),
         note: validatedData.note || null,
       })
@@ -193,13 +217,10 @@ export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
-    // Fetch all transactions for this month with category info
+    // Fetch all transactions for this month
     const { data, error } = await getServerSupabase()
       .from('transactions')
-      .select(`
-        amount,
-        category:categories(type)
-      `)
+      .select('amount')
       .eq('user_id', userId)
       .gte('date', startOfMonth.toISOString())
       .lte('date', endOfMonth.toISOString())
@@ -209,17 +230,18 @@ export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
       throw new Error(`Failed to fetch monthly statistics: ${error.message}`)
     }
 
-    // Calculate totals
+    // Calculate totals from signed amounts
+    // Positive amounts = income, Negative amounts = expense
     let totalIncome = 0
     let totalExpenses = 0
 
     data?.forEach((transaction: any) => {
       const amount = parseFloat(transaction.amount)
 
-      if (transaction.category?.type === 'income') {
+      if (amount > 0) {
         totalIncome += amount
-      } else if (transaction.category?.type === 'expense') {
-        totalExpenses += amount
+      } else if (amount < 0) {
+        totalExpenses += Math.abs(amount)
       }
     })
 
@@ -274,13 +296,37 @@ export async function updateTransaction(
 
     const validatedData = validationResult.data
 
+    // Determine transaction type and normalize amount with sign
+    let finalAmount = Math.abs(parseFloat(validatedData.amount))
+
+    if (validatedData.category_id) {
+      // If category is selected, determine type from category
+      const { data: category } = await getServerSupabase()
+        .from('categories')
+        .select('type')
+        .eq('id', validatedData.category_id)
+        .single()
+
+      // Income = positive, Expense = negative
+      if (category?.type === 'expense') {
+        finalAmount = -finalAmount
+      }
+    } else {
+      // No category: check if amount starts with + (income) or treat as expense
+      const amountStr = validatedData.amount.toString()
+      if (!amountStr.startsWith('+')) {
+        // Default: treat as expense (negative)
+        finalAmount = -finalAmount
+      }
+    }
+
     // 3. Verify ownership and update transaction
     const { data: transaction, error: updateError } = await getServerSupabase()
       .from('transactions')
       .update({
         account_id: validatedData.account_id,
         category_id: validatedData.category_id || null,
-        amount: validatedData.amount,
+        amount: finalAmount.toString(),
         date: validatedData.date || new Date().toISOString(),
         note: validatedData.note || null,
       })
@@ -413,6 +459,7 @@ export async function getSafeToSpend(): Promise<{
           continue
         }
 
+        // Calculate balance: simply sum all amounts (negative for expenses, positive for income)
         const transactionsSum = (transactions || []).reduce(
           (sum, t) => sum + parseFloat(t.amount),
           0
