@@ -1,0 +1,113 @@
+{
+  "app": {
+    "name": "Budget Zen",
+    "tagline": "Minimalist, keyboard-first expense tracker"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "signInToStart": "Sign In to Get Started"
+  },
+  "dashboard": {
+    "transactions": "Transactions",
+    "pressNToAdd": "Press {key} to quickly add a transaction",
+    "noTransactionsYet": "No transactions yet",
+    "getStarted": "Get started by adding your first transaction using the button above",
+    "thisMonth": "This month"
+  },
+  "statistics": {
+    "totalIncome": "Total Income",
+    "totalExpenses": "Total Expenses",
+    "balance": "Balance",
+    "overBudget": "Over budget",
+    "remaining": "Remaining",
+    "netFlow": "Net Flow",
+    "surplus": "Surplus",
+    "deficit": "Deficit"
+  },
+  "transaction": {
+    "quickAdd": "Quick Add Transaction",
+    "addTransaction": "Add Transaction",
+    "amount": "Amount",
+    "account": "Account",
+    "category": "Category",
+    "date": "Date",
+    "note": "Note",
+    "optional": "optional",
+    "required": "required",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "saveTransaction": "Save Transaction",
+    "amountPlaceholder": "+100 (income) or -50 (expense) or 50",
+    "notePlaceholder": "Optional note",
+    "selectAccount": "Select account",
+    "selectCategory": "Select {type} category",
+    "dialogDescription": "Press Enter to save and close. Press Cmd+Enter (or Ctrl+Enter) to save and add another.",
+    "press": "Press",
+    "toSaveAndClose": "to save and close.",
+    "or": "or",
+    "toSaveAndAddAnother": "to save and add another.",
+    "income": "Income",
+    "expense": "Expense",
+    "uncategorized": "Uncategorized"
+  },
+  "table": {
+    "date": "Date",
+    "category": "Category",
+    "account": "Account",
+    "note": "Note",
+    "amount": "Amount"
+  },
+  "accountTypes": {
+    "cash": "Cash",
+    "bank": "Bank",
+    "credit": "Credit",
+    "savings": "Savings"
+  },
+  "category": {
+    "salary": "Salary",
+    "freelance": "Freelance",
+    "investment": "Investment",
+    "gift": "Gift",
+    "other": "Other",
+    "groceries": "Groceries",
+    "rent": "Rent",
+    "transport": "Transport",
+    "eatingOut": "Eating Out",
+    "entertainment": "Entertainment",
+    "health": "Health",
+    "shopping": "Shopping",
+    "utilities": "Utilities",
+    "insurance": "Insurance",
+    "education": "Education",
+    "travel": "Travel"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your accounts, categories, and preferences",
+    "categories": {
+      "title": "Categories",
+      "description": "Organize your transactions with custom categories",
+      "addNew": "Add Category",
+      "createCategory": "Create Category",
+      "editCategory": "Edit Category",
+      "createDescription": "Add a new category to organize your transactions",
+      "editDescription": "Update category details",
+      "name": "Name",
+      "namePlaceholder": "e.g., Groceries",
+      "type": "Type",
+      "icon": "Icon",
+      "color": "Color",
+      "save": "Save Changes",
+      "create": "Create Category",
+      "delete": "Delete",
+      "deleteTitle": "Delete Category?",
+      "deleteDescription": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "incomeCategories": "Income Categories",
+      "expenseCategories": "Expense Categories",
+      "noIncome": "No income categories yet. Create one to get started.",
+      "noExpense": "No expense categories yet. Create one to get started."
+    }
+  }
+}

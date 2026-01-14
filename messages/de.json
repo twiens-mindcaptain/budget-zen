@@ -1,0 +1,113 @@
+{
+  "app": {
+    "name": "Budget Zen",
+    "tagline": "Minimalistischer, tastaturgesteuerter Ausgabentracker"
+  },
+  "auth": {
+    "signIn": "Anmelden",
+    "signOut": "Abmelden",
+    "signInToStart": "Anmelden um zu starten"
+  },
+  "dashboard": {
+    "transactions": "Transaktionen",
+    "pressNToAdd": "Drücke {key} um schnell eine Transaktion hinzuzufügen",
+    "noTransactionsYet": "Noch keine Transaktionen",
+    "getStarted": "Füge deine erste Transaktion über den Button oben hinzu",
+    "thisMonth": "Diesen Monat"
+  },
+  "statistics": {
+    "totalIncome": "Gesamteinnahmen",
+    "totalExpenses": "Gesamtausgaben",
+    "balance": "Saldo",
+    "overBudget": "Über Budget",
+    "remaining": "Verfügbar",
+    "netFlow": "Netto-Fluss",
+    "surplus": "Überschuss",
+    "deficit": "Defizit"
+  },
+  "transaction": {
+    "quickAdd": "Transaktion hinzufügen",
+    "addTransaction": "Transaktion hinzufügen",
+    "amount": "Betrag",
+    "account": "Konto",
+    "category": "Kategorie",
+    "date": "Datum",
+    "note": "Notiz",
+    "optional": "optional",
+    "required": "erforderlich",
+    "save": "Speichern",
+    "saving": "Speichere...",
+    "cancel": "Abbrechen",
+    "saveTransaction": "Transaktion speichern",
+    "amountPlaceholder": "+100 (Einnahme) oder -50 (Ausgabe) oder 50",
+    "notePlaceholder": "Optionale Notiz",
+    "selectAccount": "Konto auswählen",
+    "selectCategory": "{type} Kategorie auswählen",
+    "dialogDescription": "Enter zum Speichern und Schließen. Cmd+Enter (oder Ctrl+Enter) zum Speichern und weitere hinzufügen.",
+    "press": "Drücke",
+    "toSaveAndClose": "zum Speichern und Schließen.",
+    "or": "oder",
+    "toSaveAndAddAnother": "zum Speichern und weitere hinzufügen.",
+    "income": "Einnahme",
+    "expense": "Ausgabe",
+    "uncategorized": "Ohne Kategorie"
+  },
+  "table": {
+    "date": "Datum",
+    "category": "Kategorie",
+    "account": "Konto",
+    "note": "Notiz",
+    "amount": "Betrag"
+  },
+  "accountTypes": {
+    "cash": "Bargeld",
+    "bank": "Bank",
+    "credit": "Kredit",
+    "savings": "Sparen"
+  },
+  "category": {
+    "salary": "Gehalt",
+    "freelance": "Freiberuflich",
+    "investment": "Investition",
+    "gift": "Geschenk",
+    "other": "Sonstiges",
+    "groceries": "Lebensmittel",
+    "rent": "Miete",
+    "transport": "Transport",
+    "eatingOut": "Essen gehen",
+    "entertainment": "Unterhaltung",
+    "health": "Gesundheit",
+    "shopping": "Einkaufen",
+    "utilities": "Nebenkosten",
+    "insurance": "Versicherung",
+    "education": "Bildung",
+    "travel": "Reisen"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "description": "Verwalte deine Konten, Kategorien und Einstellungen",
+    "categories": {
+      "title": "Kategorien",
+      "description": "Organisiere deine Transaktionen mit benutzerdefinierten Kategorien",
+      "addNew": "Kategorie hinzufügen",
+      "createCategory": "Kategorie erstellen",
+      "editCategory": "Kategorie bearbeiten",
+      "createDescription": "Füge eine neue Kategorie hinzu, um deine Transaktionen zu organisieren",
+      "editDescription": "Kategoriedetails aktualisieren",
+      "name": "Name",
+      "namePlaceholder": "z.B. Lebensmittel",
+      "type": "Typ",
+      "icon": "Symbol",
+      "color": "Farbe",
+      "save": "Änderungen speichern",
+      "create": "Kategorie erstellen",
+      "delete": "Löschen",
+      "deleteTitle": "Kategorie löschen?",
+      "deleteDescription": "Bist du sicher, dass du \"{name}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "incomeCategories": "Einnahmekategorien",
+      "expenseCategories": "Ausgabenkategorien",
+      "noIncome": "Noch keine Einnahmekategorien. Erstelle eine, um zu beginnen.",
+      "noExpense": "Noch keine Ausgabenkategorien. Erstelle eine, um zu beginnen."
+    }
+  }
+}
