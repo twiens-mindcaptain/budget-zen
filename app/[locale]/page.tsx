@@ -1,7 +1,15 @@
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
-import { getRecentTransactions, getAccounts, getCategories, getMonthlyStatistics, getSafeToSpend } from '@/app/actions/transaction'
+import {
+  getRecentTransactions,
+  getAccounts,
+  getCategories,
+  getMonthlyStatistics,
+  getSafeToSpend,
+  getBillsChecklist,
+  getSinkingFunds,
+} from '@/app/actions/transaction'
 import { seedUserDefaults, getUserProfile } from '@/app/actions/seed'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import Link from 'next/link'
@@ -46,12 +54,23 @@ async function Dashboard() {
   await seedUserDefaults()
 
   // Fetch data server-side
-  const [transactions, accounts, categories, statistics, safeToSpendData, profile] = await Promise.all([
+  const [
+    transactions,
+    accounts,
+    categories,
+    statistics,
+    safeToSpendData,
+    bills,
+    sinkingFunds,
+    profile,
+  ] = await Promise.all([
     getRecentTransactions(50),
     getAccounts(),
     getCategories(),
     getMonthlyStatistics(),
     getSafeToSpend(),
+    getBillsChecklist(),
+    getSinkingFunds(),
     getUserProfile(),
   ])
 
@@ -83,6 +102,8 @@ async function Dashboard() {
           initialTransactions={transactions}
           initialStatistics={statistics}
           initialSafeToSpend={safeToSpendData}
+          initialBills={bills}
+          initialSinkingFunds={sinkingFunds}
           accounts={accounts}
           categories={categories}
           currency={profile.currency}

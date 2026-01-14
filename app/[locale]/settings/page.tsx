@@ -1,11 +1,12 @@
 import { SignedIn } from '@clerk/nextjs'
-import { getTranslations } from 'next-intl/server'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import { SettingsLayout } from '@/components/settings/settings-layout'
 import { SettingsTabs } from '@/components/settings/settings-tabs'
 import { getUserCategories } from '@/app/actions/categories'
 import { getAccountsWithBalances } from '@/app/actions/accounts'
+import { getBudgetItems } from '@/app/actions/budget-items'
 import { getUserProfile } from '@/app/actions/seed'
 
 export default async function SettingsPage() {
@@ -16,11 +17,14 @@ export default async function SettingsPage() {
   }
 
   const t = await getTranslations()
+  const locale = await getLocale()
+  const fullLocale = locale === 'en' ? 'en-US' : 'de-DE'
 
   // Fetch all data server-side
-  const [categories, accounts, profile] = await Promise.all([
+  const [categories, accounts, budgetItems, profile] = await Promise.all([
     getUserCategories(),
     getAccountsWithBalances(),
+    getBudgetItems(),
     getUserProfile(),
   ])
 
@@ -40,7 +44,9 @@ export default async function SettingsPage() {
           <SettingsTabs
             categories={categories}
             accounts={accounts}
+            budgetItems={budgetItems}
             currency={profile.currency}
+            locale={fullLocale}
           />
         </div>
       </SettingsLayout>

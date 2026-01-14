@@ -2,9 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { deleteCategory } from '@/app/actions/categories'
-import { getCategoryDisplayName } from '@/lib/i18n-helpers'
-import type { Category } from '@/lib/types'
+import { deleteBudgetItem } from '@/app/actions/budget-items'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,19 +16,29 @@ import {
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-interface DeleteCategoryDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  category: Category
-  onSuccess: (categoryId: string) => void
+interface BudgetItem {
+  id: string
+  name: string
+  category_id: string
+  amount: string
+  frequency: string
+  monthly_impact: string
+  saved_balance: string
 }
 
-export function DeleteCategoryDialog({
+interface DeleteBudgetItemDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  item: BudgetItem
+  onSuccess: (itemId: string) => void
+}
+
+export function DeleteBudgetItemDialog({
   open,
   onOpenChange,
-  category,
+  item,
   onSuccess,
-}: DeleteCategoryDialogProps) {
+}: DeleteBudgetItemDialogProps) {
   const t = useTranslations()
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -38,11 +46,11 @@ export function DeleteCategoryDialog({
     setIsDeleting(true)
 
     try {
-      const result = await deleteCategory(category.id)
+      const result = await deleteBudgetItem(item.id)
 
       if (result.success) {
-        toast.success(result.message)
-        onSuccess(category.id)
+        toast.success('Budget item deleted successfully')
+        onSuccess(item.id)
       } else {
         toast.error(result.error)
       }
@@ -58,13 +66,9 @@ export function DeleteCategoryDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t('settings.categories.deleteTitle')}
-          </AlertDialogTitle>
+          <AlertDialogTitle>{t('budgetItems.deleteItem')}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('settings.categories.deleteDescription', {
-              name: getCategoryDisplayName(category, t)
-            })}
+            {t('budgetItems.deleteWarning')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -77,7 +81,7 @@ export function DeleteCategoryDialog({
             className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
           >
             {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('settings.categories.delete')}
+            {t('transaction.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

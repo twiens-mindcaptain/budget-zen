@@ -3,9 +3,11 @@
 import { useOptimistic } from 'react'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { TransactionList } from '@/components/dashboard/transaction-list'
+import { BillsChecklist } from '@/components/dashboard/bills-checklist'
+import { SinkingFundsProgress } from '@/components/dashboard/sinking-funds-progress'
 import { QuickAddDialog } from '@/components/transactions/quick-add-dialog'
 import { useTranslations } from 'next-intl'
-import type { MonthlyStatistics } from '@/lib/types'
+import type { MonthlyStatistics, BillItem, SinkingFundItem, SafeToSpendData } from '@/lib/types'
 
 interface Transaction {
   id: string
@@ -31,11 +33,9 @@ interface Transaction {
 interface DashboardContentProps {
   initialTransactions: Transaction[]
   initialStatistics: MonthlyStatistics
-  initialSafeToSpend: {
-    safeToSpend: string
-    totalLiquid: string
-    monthlyCommitted: string
-  }
+  initialSafeToSpend: SafeToSpendData
+  initialBills: BillItem[]
+  initialSinkingFunds: SinkingFundItem[]
   accounts: any[]
   categories: any[]
   currency: string
@@ -51,6 +51,8 @@ export function DashboardContent({
   initialTransactions,
   initialStatistics,
   initialSafeToSpend,
+  initialBills,
+  initialSinkingFunds,
   accounts,
   categories,
   currency,
@@ -106,7 +108,7 @@ export function DashboardContent({
   }
 
   // Calculate safe to spend optimistically
-  const calculateSafeToSpend = (transactions: Transaction[]) => {
+  const calculateSafeToSpend = (transactions: Transaction[]): SafeToSpendData => {
     // Calculate total liquid (all account balances)
     let totalLiquid = 0
 
@@ -122,14 +124,16 @@ export function DashboardContent({
       totalLiquid += initialBalance + transactionsSum
     })
 
-    // Monthly committed stays the same (categories don't change during transaction operations)
-    const monthlyCommitted = parseFloat(initialSafeToSpend.monthlyCommitted)
-    const safeToSpend = totalLiquid - monthlyCommitted
+    // Pending bills and sinking contributions stay the same (budget items don't change during transaction operations)
+    const pendingBills = parseFloat(initialSafeToSpend.pendingBills)
+    const sinkingContributions = parseFloat(initialSafeToSpend.sinkingContributions)
+    const safeToSpend = totalLiquid - pendingBills - sinkingContributions
 
     return {
       safeToSpend: safeToSpend.toFixed(2),
       totalLiquid: totalLiquid.toFixed(2),
-      monthlyCommitted: monthlyCommitted.toFixed(2),
+      pendingBills: pendingBills.toFixed(2),
+      sinkingContributions: sinkingContributions.toFixed(2),
     }
   }
 
@@ -150,11 +154,26 @@ export function DashboardContent({
 
   return (
     <>
-      {/* Monthly Statistics */}
+      {/* Safe to Spend Card */}
       <div className="mb-6">
         <SummaryCards
           statistics={optimisticStatistics}
           safeToSpendData={optimisticSafeToSpend}
+          currency={currency}
+          locale={locale}
+        />
+      </div>
+
+      {/* Split View: Bills + Sinking Funds */}
+      <div className="grid gap-6 md:grid-cols-2 mb-6">
+        <BillsChecklist
+          initialBills={initialBills}
+          accounts={accounts}
+          currency={currency}
+          locale={locale}
+        />
+        <SinkingFundsProgress
+          funds={initialSinkingFunds}
           currency={currency}
           locale={locale}
         />

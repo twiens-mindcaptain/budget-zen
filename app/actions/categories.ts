@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 import { getServerSupabase } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import type { Category, ApiResponse } from '@/lib/types'
 
 /**
  * Schema for creating/updating a category
@@ -72,7 +73,7 @@ export async function getUserCategories() {
 /**
  * Create a new category
  */
-export async function createCategory(data: CategoryFormData) {
+export async function createCategory(data: CategoryFormData): Promise<ApiResponse<Category>> {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -89,13 +90,15 @@ export async function createCategory(data: CategoryFormData) {
     const monthly_target = calculateMonthlyTarget(validated.target_amount, validated.frequency)
 
     // Insert category
-    const { error } = await getServerSupabase()
+    const { data: category, error } = await getServerSupabase()
       .from('categories')
       .insert({
         user_id: userId,
         ...validated,
         monthly_target,
       })
+      .select()
+      .single()
 
     if (error) {
       console.error('Error creating category:', error)
@@ -110,7 +113,7 @@ export async function createCategory(data: CategoryFormData) {
 
     return {
       success: true,
-      message: 'Category created successfully',
+      data: category,
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -131,7 +134,7 @@ export async function createCategory(data: CategoryFormData) {
 /**
  * Update an existing category
  */
-export async function updateCategory(id: string, data: CategoryFormData) {
+export async function updateCategory(id: string, data: CategoryFormData): Promise<ApiResponse<Category>> {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -148,7 +151,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
     const monthly_target = calculateMonthlyTarget(validated.target_amount, validated.frequency)
 
     // Update category (only if it belongs to the user)
-    const { error } = await getServerSupabase()
+    const { data: category, error } = await getServerSupabase()
       .from('categories')
       .update({
         ...validated,
@@ -156,6 +159,8 @@ export async function updateCategory(id: string, data: CategoryFormData) {
       })
       .eq('id', id)
       .eq('user_id', userId)
+      .select()
+      .single()
 
     if (error) {
       console.error('Error updating category:', error)
@@ -170,7 +175,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
 
     return {
       success: true,
-      message: 'Category updated successfully',
+      data: category,
     }
   } catch (error) {
     if (error instanceof z.ZodError) {

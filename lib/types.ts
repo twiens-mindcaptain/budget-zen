@@ -41,6 +41,19 @@ export interface Category {
   created_at: string
 }
 
+export interface BudgetItem {
+  id: string // uuid
+  user_id: string
+  category_id: string // uuid
+  name: string // e.g., "Netflix Subscription", "Emergency Fund"
+  amount: string // Full amount (decimal 12,2) e.g., "1200.00" for annual
+  frequency: BudgetFrequency // monthly, quarterly, semi_annual, annual
+  monthly_impact: string // Normalized to monthly (decimal 12,2) e.g., "100.00" for $1200/year
+  saved_balance: string // User-entered progress toward goal (decimal 12,2)
+  created_at: string
+  updated_at: string
+}
+
 export interface Transaction {
   id: string // uuid
   user_id: string
@@ -120,6 +133,26 @@ export const insertCategorySchema = z.object({
 
 export type InsertCategoryInput = z.infer<typeof insertCategorySchema>
 
+// Budget Item insert schema
+export const insertBudgetItemSchema = z.object({
+  category_id: z.string().uuid('Invalid category'),
+  name: z.string().min(1, 'Item name is required').max(100),
+  amount: z
+    .string()
+    .refine(
+      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+      'Amount must be positive'
+    )
+    .transform((val) => parseFloat(val).toFixed(2)),
+  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']),
+  saved_balance: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseFloat(val).toFixed(2) : '0.00')),
+})
+
+export type InsertBudgetItemInput = z.infer<typeof insertBudgetItemSchema>
+
 // ============================================
 // API RESPONSE TYPES
 // ============================================
@@ -136,4 +169,42 @@ export interface MonthlyStatistics {
   income: string // Decimal string
   expenses: string // Decimal string
   balance: string // Decimal string
+}
+
+// ============================================
+// DASHBOARD TYPES
+// ============================================
+
+// Bill item for Bills Checklist (monthly budget items)
+export interface BillItem {
+  id: string // budget_item.id
+  name: string
+  category_id: string
+  category_name: string | null
+  category_icon: string
+  category_color: string
+  monthly_impact: string
+  is_paid: boolean // computed: has transaction this month
+}
+
+// Sinking fund item for Progress view (non-monthly budget items)
+export interface SinkingFundItem {
+  id: string // budget_item.id
+  name: string
+  category_id: string
+  category_name: string | null
+  category_icon: string
+  category_color: string
+  amount: string // target amount
+  monthly_impact: string
+  saved_balance: string
+  progress_percentage: number
+}
+
+// Safe to Spend data with breakdown
+export interface SafeToSpendData {
+  safeToSpend: string
+  totalLiquid: string
+  pendingBills: string
+  sinkingContributions: string
 }

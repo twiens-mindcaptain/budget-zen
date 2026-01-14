@@ -69,7 +69,7 @@ export function TransactionList({
       {initialTransactions.map((transaction) => {
         const isIncome = transaction.category?.type === 'income'
         const amount = parseFloat(transaction.amount)
-        const CategoryIcon = getCategoryIcon(transaction.category?.icon)
+        const CategoryIcon = getCategoryIcon(transaction.category?.icon || 'HelpCircle')
 
         return (
           <div

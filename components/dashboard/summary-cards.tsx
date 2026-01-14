@@ -2,16 +2,12 @@
 
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import type { MonthlyStatistics } from '@/lib/types'
+import type { MonthlyStatistics, SafeToSpendData } from '@/lib/types'
 import { formatCurrency } from '@/lib/currency'
 
 interface SummaryCardsProps {
   statistics: MonthlyStatistics
-  safeToSpendData: {
-    safeToSpend: string
-    totalLiquid: string
-    monthlyCommitted: string
-  }
+  safeToSpendData: SafeToSpendData
   currency: string
   locale: string
 }
@@ -23,7 +19,8 @@ export function SummaryCards({ statistics, safeToSpendData, currency, locale }: 
   const balance = parseFloat(statistics.balance)
   const safeToSpend = parseFloat(safeToSpendData.safeToSpend)
   const totalLiquid = parseFloat(safeToSpendData.totalLiquid)
-  const monthlyCommitted = parseFloat(safeToSpendData.monthlyCommitted)
+  const pendingBills = parseFloat(safeToSpendData.pendingBills)
+  const sinkingContributions = parseFloat(safeToSpendData.sinkingContributions)
 
   const isNegativeSafeToSpend = safeToSpend < 0
 
@@ -50,8 +47,10 @@ export function SummaryCards({ statistics, safeToSpendData, currency, locale }: 
           )}
         </div>
         <p className="text-xs text-zinc-500 mt-2">
-          {formatCurrency(totalLiquid, currency, '', locale)} {t('budget.totalLiquid')} -{' '}
-          {formatCurrency(monthlyCommitted, currency, '', locale)} {t('budget.monthlyCommitted')}
+          {formatCurrency(totalLiquid, currency, '', locale)} {t('budget.totalCash')} -{' '}
+          {formatCurrency(pendingBills, currency, '', locale)} {t('budget.pendingBills')} -{' '}
+          {formatCurrency(sinkingContributions, currency, '', locale)}{' '}
+          {t('budget.sinkingContributions')}
         </p>
       </div>
 

@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createCategory, updateCategory, CategoryFormData } from '@/app/actions/categories'
+import type { Category } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -50,18 +51,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-interface Category {
-  id: string
-  name: string | null
-  translation_key?: string | null
-  icon: string
-  color: string
-  type: 'income' | 'expense'
-  budget_type?: string
-  target_amount?: string | null
-  frequency?: string
-}
-
 interface CategoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -101,8 +90,8 @@ export function CategoryDialog({
     if (category) {
       form.reset({
         name: getCategoryDisplayName(category, t),
-        icon: category.icon,
-        color: category.color,
+        icon: category.icon || 'ShoppingCart',
+        color: category.color || '#10b981',
         type: category.type,
         budget_type: (category.budget_type as 'variable' | 'fixed' | 'sinking_fund') || 'variable',
         target_amount: category.target_amount || '',
@@ -130,12 +119,13 @@ export function CategoryDialog({
         : await createCategory(data as CategoryFormData)
 
       if (result.success) {
-        toast.success(result.message)
-        // Call onSuccess with updated/created category
-        onSuccess({
-          id: category?.id || crypto.randomUUID(), // Temp ID for new categories
-          ...data,
-        })
+        toast.success(
+          isEditing
+            ? 'Category updated successfully'
+            : 'Category created successfully'
+        )
+        // Call onSuccess with the full category object from server
+        onSuccess(result.data)
         form.reset()
       } else {
         toast.error(result.error)

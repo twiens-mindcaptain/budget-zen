@@ -8,19 +8,7 @@ import { CategoryDialog } from '@/components/settings/category-dialog'
 import { DeleteCategoryDialog } from '@/components/settings/delete-category-dialog'
 import { getCategoryIcon } from '@/lib/icon-mapper'
 import { getCategoryDisplayName } from '@/lib/i18n-helpers'
-
-interface Category {
-  id: string
-  name: string | null
-  translation_key?: string | null
-  icon: string
-  color: string
-  type: 'income' | 'expense'
-  budget_type?: string
-  target_amount?: string | null
-  frequency?: string
-  monthly_target?: string | null
-}
+import type { Category } from '@/lib/types'
 
 interface CategoriesTabProps {
   initialCategories: Category[]
@@ -84,7 +72,8 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
   }
 
   const renderCategoryCard = (category: Category) => {
-    const CategoryIcon = getCategoryIcon(category.icon)
+    const CategoryIcon = getCategoryIcon(category.icon || 'HelpCircle')
+    const categoryColor = category.color || '#71717a'
 
     return (
       <div
@@ -96,12 +85,12 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
           <div
             className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{
-              backgroundColor: `${category.color}15`,
+              backgroundColor: `${categoryColor}15`,
             }}
           >
             <CategoryIcon
               className="w-6 h-6"
-              style={{ color: category.color }}
+              style={{ color: categoryColor }}
             />
           </div>
 

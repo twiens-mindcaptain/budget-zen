@@ -2,14 +2,19 @@
 
 A minimalist, keyboard-first expense tracker built with modern web technologies. Track your finances with speed, privacy, and an "Excel-soul in an App-body" experience.
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/yourusername/budget-zen)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/yourusername/budget-zen)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## ✨ Features
 
 ### Core Functionality
 - 💰 **Quick Transaction Entry** - Add expenses/income in seconds with keyboard shortcuts
-- 📊 **Dashboard** - Overview with balance, income, expenses, and net flow
+- 📊 **Dashboard** - Overview with balance, income, expenses, and safe-to-spend
+- 🏦 **Account Management** - Track multiple bank accounts, cash, and credit cards
+- 📋 **Budget Items** - Manage monthly bills and sinking funds (savings goals)
+- 💸 **Safe to Spend** - Smart calculation: Total Cash - Pending Bills - Sinking Contributions
+- ✅ **Bills Checklist** - Track which monthly bills have been paid
+- 🐷 **Sinking Funds Progress** - Visual progress bars for savings goals
 - 🏷️ **Category Management** - Full CRUD operations with custom icons and colors
 - 🌍 **Multilingual** - Full English and German support
 - 💱 **Smart Currency Formatting** - Locale-aware formatting (1.234,56 € vs 1,234.56 €)
@@ -53,19 +58,27 @@ budget_zen/
 │   │   ├── settings/          # Settings page
 │   │   └── layout.tsx         # Root layout
 │   └── actions/               # Server Actions
-│       ├── transaction.ts     # Transaction CRUD
+│       ├── transaction.ts     # Transaction CRUD + Bills/Sinking Funds
 │       ├── categories.ts      # Category CRUD
+│       ├── accounts.ts        # Account CRUD
+│       ├── budget-items.ts    # Budget Items CRUD
 │       └── seed.ts            # Database seeding
 ├── components/
 │   ├── transactions/          # Transaction components
 │   │   └── quick-add-dialog.tsx
 │   ├── settings/              # Settings components
+│   │   ├── settings-tabs.tsx
 │   │   ├── categories-tab.tsx
-│   │   ├── category-dialog.tsx
+│   │   ├── accounts-tab.tsx
+│   │   ├── budget-items-tab.tsx
+│   │   ├── budget-item-dialog.tsx
 │   │   ├── icon-picker.tsx
 │   │   └── color-picker.tsx
 │   ├── dashboard/             # Dashboard components
-│   │   └── summary-cards.tsx
+│   │   ├── summary-cards.tsx
+│   │   ├── bills-checklist.tsx
+│   │   ├── sinking-funds-progress.tsx
+│   │   └── transaction-list.tsx
 │   └── ui/                    # shadcn/ui components
 ├── lib/
 │   ├── types.ts               # TypeScript types + Zod schemas
@@ -189,12 +202,21 @@ Supports 20+ currencies with correct symbol placement (before/after amount).
 
 - **profiles** - User preferences (currency, language)
 - **accounts** - Bank accounts, cash, credit cards
+  - `initial_balance` - Starting balance
+  - Current balance calculated as: `initial_balance + sum(transactions)`
 - **categories** - Income/expense categories with multilingual support
   - `name` (text, nullable) - For user-created categories
   - `translation_key` (text, nullable) - For system categories (e.g., "category.groceries")
   - `icon` (text) - Lucide icon name
   - `color` (text) - Hex color code
   - Constraint: Either `name` OR `translation_key` must be set
+- **budget_items** - Monthly bills and sinking funds
+  - `name` - Item name (e.g., "Netflix", "Emergency Fund")
+  - `amount` - Full amount (e.g., $1200 for annual)
+  - `frequency` - monthly, quarterly, semi_annual, annual
+  - `monthly_impact` - Normalized to monthly (auto-calculated)
+  - `saved_balance` - Progress toward sinking fund goal (user-entered)
+  - Linked to a category for organization and display
 - **transactions** - Core transaction data
   - Amounts stored as `decimal(12,2)` for precision
   - Linked to accounts and categories
@@ -208,14 +230,18 @@ See [docs/roadmap.md](docs/roadmap.md) for the complete roadmap.
 ### Completed ✅
 - Authentication system
 - Internationalization (EN/DE)
-- Dashboard with transaction list
+- Dashboard with transaction list and split view
 - Category management (CRUD)
+- Account management (CRUD)
+- Budget Items management (CRUD)
+- Bills checklist (track monthly bill payments)
+- Sinking funds progress tracking
+- Safe-to-Spend calculation
 - Multilingual system categories
 - Currency formatting
 - Keyboard shortcuts
 
 ### In Progress ⏳
-- Account management
 - Transaction editing/deletion
 
 ### Planned 📋
@@ -273,8 +299,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Version**: 1.1.0  
-**Last Updated**: January 13, 2026  
+**Version**: 1.3.0
+**Last Updated**: January 14, 2026
 **Status**: Active Development
+
+**Latest Features (v1.3.0)**:
+- ✅ Budget Items system (monthly bills + sinking funds)
+- ✅ Bills checklist with payment tracking
+- ✅ Sinking funds progress visualization
+- ✅ Safe-to-Spend calculation (Total Cash - Pending Bills - Sinking Contributions)
+- ✅ Full CRUD for budget items with frequency options
+- ✅ Manual savings progress tracking for sinking funds
 
 Built with ❤️ using modern web technologies.

@@ -3,7 +3,15 @@
 import { auth } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 import { getServerSupabase } from '@/lib/supabase'
-import { insertTransactionSchema, type ApiResponse, type Transaction, type MonthlyStatistics } from '@/lib/types'
+import {
+  insertTransactionSchema,
+  type ApiResponse,
+  type Transaction,
+  type MonthlyStatistics,
+  type BillItem,
+  type SinkingFundItem,
+  type SafeToSpendData,
+} from '@/lib/types'
 
 /**
  * Creates a new transaction in the database
@@ -413,88 +421,223 @@ export async function deleteTransaction(
 }
 
 /**
- * Calculate Safe-to-Spend amount
- * Formula: Total Liquid Cash - Monthly Committed
+ * Get bills checklist for current month
+ * Returns monthly budget items with payment status
  */
-export async function getSafeToSpend(): Promise<{
-  safeToSpend: string
-  totalLiquid: string
-  monthlyCommitted: string
-}> {
-  try {
-    const { userId } = await auth()
+export async function getBillsChecklist(): Promise<BillItem[]> {
+  const { userId } = await auth()
+  if (!userId) throw new Error('Unauthorized')
 
-    if (!userId) {
-      throw new Error('Unauthorized')
-    }
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
-    // 1. Calculate Total Liquid Cash (sum of all account balances)
-    // Get all accounts
-    const { data: accounts, error: accountsError } = await getServerSupabase()
-      .from('accounts')
-      .select('id, initial_balance')
+  // Get monthly budget items with category info
+  const { data: items, error } = await getServerSupabase()
+    .from('budget_items')
+    .select(`
+      id,
+      name,
+      category_id,
+      monthly_impact,
+      category:categories(name, translation_key, icon, color)
+    `)
+    .eq('user_id', userId)
+    .eq('frequency', 'monthly')
+    .order('name', { ascending: true })
+
+  if (error) throw new Error('Failed to fetch bills')
+
+  // For each item, check if paid this month
+  const bills: BillItem[] = []
+
+  for (const item of items || []) {
+    const { data: transactions } = await getServerSupabase()
+      .from('transactions')
+      .select('id')
       .eq('user_id', userId)
+      .eq('category_id', item.category_id)
+      .gte('date', startOfMonth.toISOString())
+      .lte('date', endOfMonth.toISOString())
+      .limit(1)
 
-    if (accountsError) {
-      console.error('Error fetching accounts:', accountsError)
-      throw new Error('Failed to fetch accounts')
-    }
+    const category = Array.isArray(item.category) ? item.category[0] : item.category
 
-    let totalLiquid = 0
+    bills.push({
+      id: item.id,
+      name: item.name,
+      category_id: item.category_id,
+      category_name: category?.name || null,
+      category_icon: category?.icon || 'HelpCircle',
+      category_color: category?.color || '#71717a',
+      monthly_impact: item.monthly_impact,
+      is_paid: !!(transactions && transactions.length > 0),
+    })
+  }
 
-    // For each account, calculate current balance (initial_balance + transactions sum)
-    if (accounts && accounts.length > 0) {
-      for (const account of accounts) {
-        const initialBalance = parseFloat(account.initial_balance)
+  return bills
+}
 
-        // Get sum of transactions for this account
-        const { data: transactions, error: transError } = await getServerSupabase()
-          .from('transactions')
-          .select('amount')
-          .eq('account_id', account.id)
-          .eq('user_id', userId)
+/**
+ * Get sinking funds with progress
+ * Returns non-monthly budget items with saved balance
+ */
+export async function getSinkingFunds(): Promise<SinkingFundItem[]> {
+  const { userId } = await auth()
+  if (!userId) throw new Error('Unauthorized')
 
-        if (transError) {
-          console.error('Error fetching transactions:', transError)
-          continue
-        }
+  const { data: items, error } = await getServerSupabase()
+    .from('budget_items')
+    .select(`
+      id,
+      name,
+      category_id,
+      amount,
+      monthly_impact,
+      saved_balance,
+      category:categories(name, translation_key, icon, color)
+    `)
+    .eq('user_id', userId)
+    .neq('frequency', 'monthly')
+    .order('name', { ascending: true })
 
-        // Calculate balance: simply sum all amounts (negative for expenses, positive for income)
-        const transactionsSum = (transactions || []).reduce(
-          (sum, t) => sum + parseFloat(t.amount),
-          0
-        )
+  if (error) throw new Error('Failed to fetch sinking funds')
 
-        totalLiquid += initialBalance + transactionsSum
-      }
-    }
-
-    // 2. Calculate Monthly Committed (sum of monthly_target for fixed/sinking_fund categories)
-    const { data: categories, error: categoriesError } = await getServerSupabase()
-      .from('categories')
-      .select('monthly_target')
-      .eq('user_id', userId)
-      .in('budget_type', ['fixed', 'sinking_fund'])
-
-    if (categoriesError) {
-      console.error('Error fetching categories:', categoriesError)
-      throw new Error('Failed to fetch categories')
-    }
-
-    const monthlyCommitted = (categories || []).reduce((sum, cat) => {
-      return sum + (cat.monthly_target ? parseFloat(cat.monthly_target) : 0)
-    }, 0)
-
-    // 3. Calculate Safe to Spend
-    const safeToSpend = totalLiquid - monthlyCommitted
+  return (items || []).map((item) => {
+    const category = Array.isArray(item.category) ? item.category[0] : item.category
+    const targetAmount = parseFloat(item.amount)
+    const savedBalance = parseFloat(item.saved_balance)
+    const progressPercentage =
+      targetAmount > 0 ? Math.min((savedBalance / targetAmount) * 100, 100) : 0
 
     return {
-      safeToSpend: safeToSpend.toFixed(2),
-      totalLiquid: totalLiquid.toFixed(2),
-      monthlyCommitted: monthlyCommitted.toFixed(2),
+      id: item.id,
+      name: item.name,
+      category_id: item.category_id,
+      category_name: category?.name || null,
+      category_icon: category?.icon || 'HelpCircle',
+      category_color: category?.color || '#71717a',
+      amount: item.amount,
+      monthly_impact: item.monthly_impact,
+      saved_balance: item.saved_balance,
+      progress_percentage: Math.round(progressPercentage),
     }
-  } catch (error) {
-    console.error('Error in getSafeToSpend:', error)
-    throw error
+  })
+}
+
+/**
+ * Calculate Safe-to-Spend with NEW formula
+ * Formula: Total Liquid - Pending Bills - Sinking Contributions
+ */
+export async function getSafeToSpend(): Promise<SafeToSpendData> {
+  const { userId } = await auth()
+  if (!userId) throw new Error('Unauthorized')
+
+  // 1. Calculate Total Liquid (sum of all account balances)
+  const { data: accounts, error: accountsError } = await getServerSupabase()
+    .from('accounts')
+    .select('id, initial_balance')
+    .eq('user_id', userId)
+
+  if (accountsError) {
+    console.error('Error fetching accounts:', accountsError)
+    throw new Error('Failed to fetch accounts')
   }
+
+  let totalLiquid = 0
+
+  if (accounts && accounts.length > 0) {
+    for (const account of accounts) {
+      const initialBalance = parseFloat(account.initial_balance)
+
+      const { data: transactions, error: transError } = await getServerSupabase()
+        .from('transactions')
+        .select('amount')
+        .eq('account_id', account.id)
+        .eq('user_id', userId)
+
+      if (transError) {
+        console.error('Error fetching transactions:', transError)
+        continue
+      }
+
+      const transactionsSum = (transactions || []).reduce(
+        (sum, t) => sum + parseFloat(t.amount),
+        0
+      )
+
+      totalLiquid += initialBalance + transactionsSum
+    }
+  }
+
+  // 2. Get unpaid bills (monthly items not paid this month)
+  const bills = await getBillsChecklist()
+  const pendingBills = bills
+    .filter((bill) => !bill.is_paid)
+    .reduce((sum, bill) => sum + parseFloat(bill.monthly_impact), 0)
+
+  // 3. Get sinking funds contributions (always deducted)
+  const funds = await getSinkingFunds()
+  const sinkingContributions = funds.reduce(
+    (sum, fund) => sum + parseFloat(fund.monthly_impact),
+    0
+  )
+
+  // 4. Calculate Safe to Spend
+  const safeToSpend = totalLiquid - pendingBills - sinkingContributions
+
+  return {
+    safeToSpend: safeToSpend.toFixed(2),
+    totalLiquid: totalLiquid.toFixed(2),
+    pendingBills: pendingBills.toFixed(2),
+    sinkingContributions: sinkingContributions.toFixed(2),
+  }
+}
+
+/**
+ * Mark a bill as paid by creating a transaction
+ */
+export async function markBillPaid(
+  billId: string,
+  accountId: string
+): Promise<ApiResponse<Transaction>> {
+  const { userId } = await auth()
+  if (!userId) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  // Get budget item details
+  const { data: item, error: itemError } = await getServerSupabase()
+    .from('budget_items')
+    .select('category_id, monthly_impact')
+    .eq('id', billId)
+    .eq('user_id', userId)
+    .single()
+
+  if (itemError || !item) {
+    return { success: false, error: 'Budget item not found' }
+  }
+
+  // Create transaction (negative amount for expense)
+  const amount = -Math.abs(parseFloat(item.monthly_impact))
+
+  const { data: transaction, error: txError } = await getServerSupabase()
+    .from('transactions')
+    .insert({
+      user_id: userId,
+      account_id: accountId,
+      category_id: item.category_id,
+      amount: amount.toString(),
+      date: new Date().toISOString(),
+      note: 'Bill payment',
+    })
+    .select()
+    .single()
+
+  if (txError) {
+    return { success: false, error: 'Failed to create transaction' }
+  }
+
+  revalidatePath('/')
+  return { success: true, data: transaction as Transaction }
 }
