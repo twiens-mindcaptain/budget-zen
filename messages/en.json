@@ -50,7 +50,14 @@
     "toSaveAndAddAnother": "to save and add another.",
     "income": "Income",
     "expense": "Expense",
-    "uncategorized": "Uncategorized"
+    "uncategorized": "Uncategorized",
+    "editTransaction": "Edit Transaction",
+    "editDescription": "Update transaction details",
+    "saveChanges": "Save Changes",
+    "deleteTransaction": "Delete Transaction",
+    "deleteWarning": "Are you sure you want to delete this transaction? This action cannot be undone.",
+    "delete": "Delete",
+    "deleting": "Deleting..."
   },
   "table": {
     "date": "Date",

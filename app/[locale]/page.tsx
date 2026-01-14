@@ -2,6 +2,8 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
 import { format } from 'date-fns'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { QuickAddDialog } from '@/components/transactions/quick-add-dialog'
+import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
+import { DeleteTransactionDialog } from '@/components/transactions/delete-transaction-dialog'
 import { getRecentTransactions, getAccounts, getCategories, getMonthlyStatistics, getSafeToSpend } from '@/app/actions/transaction'
 import { seedUserDefaults, getUserProfile } from '@/app/actions/seed'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
@@ -131,7 +133,7 @@ async function Dashboard() {
               return (
                 <div
                   key={transaction.id}
-                  className="bg-white rounded-xl border border-zinc-200 p-4 hover:bg-zinc-50/50 transition-colors shadow-sm"
+                  className="group bg-white rounded-xl border border-zinc-200 p-4 hover:bg-zinc-50/50 transition-colors shadow-sm"
                 >
                   <div className="flex items-center gap-4">
                     {/* Icon */}
@@ -175,19 +177,35 @@ async function Dashboard() {
                       )}
                     </div>
 
-                    {/* Right: Amount */}
-                    <div className="flex-shrink-0 text-right">
-                      <div
-                        className={`text-lg font-semibold tabular-nums ${
-                          isIncome ? 'text-emerald-600' : 'text-zinc-900'
-                        }`}
-                      >
-                        {formatCurrency(
-                          amount,
-                          profile.currency,
-                          isIncome ? '+' : '-',
-                          fullLocale
-                        )}
+                    {/* Right: Amount and Actions */}
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <div className="text-right">
+                        <div
+                          className={`text-lg font-semibold tabular-nums ${
+                            isIncome ? 'text-emerald-600' : 'text-zinc-900'
+                          }`}
+                        >
+                          {formatCurrency(
+                            amount,
+                            profile.currency,
+                            isIncome ? '+' : '-',
+                            fullLocale
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Edit and Delete Buttons */}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <EditTransactionDialog
+                          transaction={transaction}
+                          accounts={accounts}
+                          categories={categories}
+                        />
+                        <DeleteTransactionDialog
+                          transaction={transaction}
+                          currency={profile.currency}
+                          locale={fullLocale}
+                        />
                       </div>
                     </div>
                   </div>

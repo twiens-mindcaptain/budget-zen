@@ -237,6 +237,136 @@ export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
 }
 
 /**
+ * Updates an existing transaction in the database
+ *
+ * @param transactionId - UUID of the transaction to update
+ * @param data - Updated transaction data matching insertTransactionSchema
+ * @returns ApiResponse with success/error status
+ */
+export async function updateTransaction(
+  transactionId: string,
+  data: unknown
+): Promise<ApiResponse<Transaction>> {
+  try {
+    // 1. Authenticate user via Clerk
+    const { userId } = await auth()
+
+    if (!userId) {
+      return {
+        success: false,
+        error: 'Unauthorized. Please sign in to update transactions.',
+      }
+    }
+
+    // 2. Validate input with Zod
+    const validationResult = insertTransactionSchema.safeParse(data)
+
+    if (!validationResult.success) {
+      const errorMessages = validationResult.error.issues
+        .map((err) => err.message)
+        .join(', ')
+
+      return {
+        success: false,
+        error: `Validation failed: ${errorMessages}`,
+      }
+    }
+
+    const validatedData = validationResult.data
+
+    // 3. Verify ownership and update transaction
+    const { data: transaction, error: updateError } = await getServerSupabase()
+      .from('transactions')
+      .update({
+        account_id: validatedData.account_id,
+        category_id: validatedData.category_id || null,
+        amount: validatedData.amount,
+        date: validatedData.date || new Date().toISOString(),
+        note: validatedData.note || null,
+      })
+      .eq('id', transactionId)
+      .eq('user_id', userId) // Ensure user owns this transaction
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('Supabase update error:', updateError)
+      return {
+        success: false,
+        error: `Failed to update transaction: ${updateError.message}`,
+      }
+    }
+
+    // 4. Revalidate the dashboard path
+    revalidatePath('/')
+
+    // 5. Return success response
+    return {
+      success: true,
+      data: transaction as Transaction,
+    }
+  } catch (error) {
+    console.error('Unexpected error in updateTransaction:', error)
+    return {
+      success: false,
+      error: 'An unexpected error occurred. Please try again.',
+    }
+  }
+}
+
+/**
+ * Deletes a transaction from the database
+ *
+ * @param transactionId - UUID of the transaction to delete
+ * @returns ApiResponse with success/error status
+ */
+export async function deleteTransaction(
+  transactionId: string
+): Promise<ApiResponse<null>> {
+  try {
+    // 1. Authenticate user via Clerk
+    const { userId } = await auth()
+
+    if (!userId) {
+      return {
+        success: false,
+        error: 'Unauthorized. Please sign in to delete transactions.',
+      }
+    }
+
+    // 2. Delete transaction (ownership check via user_id)
+    const { error: deleteError } = await getServerSupabase()
+      .from('transactions')
+      .delete()
+      .eq('id', transactionId)
+      .eq('user_id', userId) // Ensure user owns this transaction
+
+    if (deleteError) {
+      console.error('Supabase delete error:', deleteError)
+      return {
+        success: false,
+        error: `Failed to delete transaction: ${deleteError.message}`,
+      }
+    }
+
+    // 3. Revalidate the dashboard path
+    revalidatePath('/')
+
+    // 4. Return success response
+    return {
+      success: true,
+      data: null,
+    }
+  } catch (error) {
+    console.error('Unexpected error in deleteTransaction:', error)
+    return {
+      success: false,
+      error: 'An unexpected error occurred. Please try again.',
+    }
+  }
+}
+
+/**
  * Calculate Safe-to-Spend amount
  * Formula: Total Liquid Cash - Monthly Committed
  */
