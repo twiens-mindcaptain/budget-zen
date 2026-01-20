@@ -10,7 +10,9 @@ import { getCategoryDisplayName } from '@/lib/i18n-helpers'
 import { formatCurrency } from '@/lib/currency'
 import { assignBudget } from '@/app/actions/budgets'
 import { toast } from 'sonner'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Calendar } from 'lucide-react'
+import { format } from 'date-fns'
+import { de, enUS } from 'date-fns/locale'
 import type { MonthlyBudgetWithActivity, ZBBCategoryType } from '@/lib/types'
 
 interface BudgetTableProps {
@@ -139,6 +141,162 @@ export function BudgetTable({ budgets, suggestedAmounts = {}, currency, locale, 
         toast.error(result.error)
       }
     })
+  }
+
+  // Render row for Sinking Fund categories (SF1/SF2) with simplified columns
+  const renderSinkingFundRow = (budget: MonthlyBudgetWithActivity) => {
+    const { category } = budget
+    const CategoryIcon = getCategoryIcon(category.icon)
+    const assigned = parseFloat(budget.assigned_amount)
+    const isEditing = editingId === budget.category_id
+    const suggestedAmount = suggestedAmounts[budget.category_id]
+    const hasSuggestion = suggestedAmount && parseFloat(suggestedAmount) > 0
+    const suggestionDiffers = hasSuggestion && suggestedAmount !== budget.assigned_amount
+
+    // Calculate saved amount = total available (start_balance + assigned + activity)
+    // This represents the actual current balance of the sinking fund
+    const savedAmount = parseFloat(budget.available)
+    const targetAmount = parseFloat(category.target_amount || '0')
+
+    // Format due date if available
+    const dateLocale = locale === 'de-DE' ? de : enUS
+    const dueDateFormatted = category.due_date
+      ? format(new Date(category.due_date), 'MMM yyyy', { locale: dateLocale })
+      : null
+
+    return (
+      <div
+        key={budget.category_id}
+        className="flex items-center gap-3 py-2 px-3 hover:bg-zinc-50 rounded-lg transition-colors"
+      >
+        {/* Category Icon & Name with Due Date */}
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${category.color || '#71717a'}15` }}
+        >
+          <CategoryIcon className="w-4 h-4" style={{ color: category.color || '#71717a' }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-zinc-900 truncate">
+            {getCategoryDisplayName(category, t)}
+          </div>
+          {dueDateFormatted && (
+            <div className="text-xs text-zinc-500 flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {dueDateFormatted}
+            </div>
+          )}
+        </div>
+
+        {/* Goal (Ziel) */}
+        <div className="w-24 text-right">
+          <span className="text-sm tabular-nums text-zinc-700">
+            {targetAmount > 0
+              ? formatCurrency(targetAmount, currency, '', locale)
+              : '—'}
+          </span>
+        </div>
+
+        {/* Saved (Gespart) */}
+        <div className="w-24 text-right">
+          <span className={`text-sm tabular-nums ${savedAmount > 0 ? 'text-blue-600' : 'text-zinc-400'}`}>
+            {savedAmount > 0
+              ? formatCurrency(savedAmount, currency, '', locale)
+              : '—'}
+          </span>
+        </div>
+
+        {/* +Month (editable assigned amount) */}
+        <div className="w-24 text-right flex items-center justify-end gap-1">
+          {isEditing ? (
+            <Input
+              type="number"
+              step="0.01"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={() => handleAssignBlur(budget)}
+              onKeyDown={(e) => handleKeyDown(e, budget)}
+              autoFocus
+              className="h-7 text-sm text-right tabular-nums"
+            />
+          ) : (
+            <>
+              {suggestionDiffers && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAutoFill(budget, suggestedAmount!)}
+                  disabled={isPending}
+                  className="h-6 w-6 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                  title={t('budget.autoFillHint', { amount: formatCurrency(parseFloat(suggestedAmount!), currency, '', locale) })}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              <button
+                onClick={() => handleAssignClick(budget)}
+                className="text-sm tabular-nums text-emerald-600 hover:text-emerald-700 hover:underline"
+              >
+                +{formatCurrency(assigned, currency, '', locale)}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Render group for Sinking Funds with different column headers
+  const renderSinkingFundGroup = (
+    title: string,
+    budgets: MonthlyBudgetWithActivity[],
+    zbbType: ZBBCategoryType
+  ) => {
+    if (budgets.length === 0) return null
+
+    const totalTarget = budgets.reduce((sum, b) => sum + parseFloat(b.category.target_amount || '0'), 0)
+    // Total saved = sum of available balances (includes this month's contribution)
+    const totalSaved = budgets.reduce((sum, b) => sum + parseFloat(b.available), 0)
+    const totalAssigned = budgets.reduce((sum, b) => sum + parseFloat(b.assigned_amount), 0)
+
+    return (
+      <Card key={zbbType} className="mb-4">
+        <CardHeader className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-zinc-700">
+              {title}
+            </CardTitle>
+            <div className="flex gap-4 text-xs">
+              <div className="w-24 text-right">
+                <div className="text-zinc-400 mb-0.5">{t('budget.sfGoal')}</div>
+                <div className="text-zinc-500">
+                  {totalTarget > 0
+                    ? formatCurrency(totalTarget, currency, '', locale)
+                    : '—'}
+                </div>
+              </div>
+              <div className="w-24 text-right">
+                <div className="text-zinc-400 mb-0.5">{t('budget.sfSaved')}</div>
+                <div className={totalSaved > 0 ? 'text-blue-600' : 'text-zinc-500'}>
+                  {totalSaved > 0
+                    ? formatCurrency(totalSaved, currency, '', locale)
+                    : '—'}
+                </div>
+              </div>
+              <div className="w-24 text-right">
+                <div className="text-zinc-400 mb-0.5">{t('budget.sfMonthly')}</div>
+                <div className="font-semibold text-emerald-600">
+                  +{formatCurrency(totalAssigned, currency, '', locale)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="py-0 px-1">
+          {budgets.map(renderSinkingFundRow)}
+        </CardContent>
+      </Card>
+    )
   }
 
   const renderBudgetRow = (budget: MonthlyBudgetWithActivity) => {
@@ -316,8 +474,8 @@ export function BudgetTable({ budgets, suggestedAmounts = {}, currency, locale, 
       {/* Budget Groups */}
       {renderGroup(t('budget.zbbTypes.FIX'), groupedBudgets.FIX, 'FIX')}
       {renderGroup(t('budget.zbbTypes.VARIABLE'), groupedBudgets.VARIABLE, 'VARIABLE')}
-      {renderGroup(t('budget.zbbTypes.SF1'), groupedBudgets.SF1, 'SF1')}
-      {renderGroup(t('budget.zbbTypes.SF2'), groupedBudgets.SF2, 'SF2')}
+      {renderSinkingFundGroup(t('budget.zbbTypes.SF1'), groupedBudgets.SF1, 'SF1')}
+      {renderSinkingFundGroup(t('budget.zbbTypes.SF2'), groupedBudgets.SF2, 'SF2')}
     </div>
   )
 }

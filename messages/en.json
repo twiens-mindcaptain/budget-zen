@@ -261,7 +261,10 @@
     },
     "dueDate": "Due Date",
     "autoFillSuccess": "Amount auto-filled",
-    "autoFillHint": "Suggested: {amount}"
+    "autoFillHint": "Suggested: {amount}",
+    "sfGoal": "Goal",
+    "sfSaved": "Saved",
+    "sfMonthly": "+Month"
   },
   "budgetItems": {
     "title": "Budget Items",

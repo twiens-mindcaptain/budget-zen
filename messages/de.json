@@ -261,7 +261,10 @@
     },
     "dueDate": "Fälligkeitsdatum",
     "autoFillSuccess": "Betrag automatisch ausgefüllt",
-    "autoFillHint": "Vorgeschlagen: {amount}"
+    "autoFillHint": "Vorgeschlagen: {amount}",
+    "sfGoal": "Ziel",
+    "sfSaved": "Gespart",
+    "sfMonthly": "+Monat"
   },
   "budgetItems": {
     "title": "Budget-Positionen",
