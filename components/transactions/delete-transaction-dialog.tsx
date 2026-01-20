@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Trash2, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { format } from 'date-fns'
+import { de, enUS } from 'date-fns/locale'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +19,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { deleteTransaction } from '@/app/actions/transaction'
 import { getCategoryDisplayName } from '@/lib/i18n-helpers'
-import { formatCurrency } from '@/lib/currency'
+import { formatCurrency, parseLocalDate } from '@/lib/currency'
+import { toast } from 'sonner'
 
 interface DeleteTransactionDialogProps {
   transaction: any // Full transaction object with category and account data
@@ -51,9 +53,8 @@ export function DeleteTransactionDialog({ transaction, currency, locale, onOptim
           setOpen(false)
         }
       } else {
-        // Show error (you could use a toast notification here)
         console.error('Transaction deletion failed:', result.error)
-        alert(result.error)
+        toast.error(result.error)
         // Reopen dialog if there was an error
         if (onOptimisticDelete) {
           setOpen(true)
@@ -61,7 +62,7 @@ export function DeleteTransactionDialog({ transaction, currency, locale, onOptim
       }
     } catch (error) {
       console.error('Unexpected error:', error)
-      alert('An unexpected error occurred')
+      toast.error(t('common.unexpectedError'))
       // Reopen dialog if there was an error
       if (onOptimisticDelete) {
         setOpen(true)
@@ -71,7 +72,7 @@ export function DeleteTransactionDialog({ transaction, currency, locale, onOptim
     }
   }
 
-  const isIncome = transaction.category?.type === 'income'
+  const isIncome = transaction.category?.type === 'INCOME'
   const amount = parseFloat(transaction.amount)
 
   return (
@@ -93,9 +94,9 @@ export function DeleteTransactionDialog({ transaction, currency, locale, onOptim
         <div className="bg-zinc-50 rounded-lg p-4 space-y-2 my-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-zinc-500">{t('transaction.amount')}</span>
-            <span className={`text-lg font-semibold ${isIncome ? 'text-emerald-600' : 'text-zinc-900'}`}>
+            <span className={`text-lg font-semibold ${isIncome ? 'text-emerald-600' : 'text-red-600'}`}>
               {formatCurrency(
-                amount,
+                Math.abs(amount),
                 currency,
                 isIncome ? '+' : '-',
                 locale
@@ -112,22 +113,16 @@ export function DeleteTransactionDialog({ transaction, currency, locale, onOptim
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-zinc-500">{t('transaction.account')}</span>
-            <span className="text-sm font-medium text-zinc-900">
-              {transaction.account?.name || 'Unknown'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
             <span className="text-sm text-zinc-500">{t('transaction.date')}</span>
             <span className="text-sm font-medium text-zinc-900">
-              {format(new Date(transaction.date), 'MMM dd, yyyy')}
+              {format(parseLocalDate(transaction.date), 'PP', { locale: locale === 'de-DE' ? de : enUS })}
             </span>
           </div>
-          {transaction.note && (
+          {transaction.memo && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-zinc-500">{t('transaction.note')}</span>
+              <span className="text-sm text-zinc-500">{t('transaction.memo')}</span>
               <span className="text-sm font-medium text-zinc-900 truncate max-w-[200px]">
-                {transaction.note}
+                {transaction.memo}
               </span>
             </div>
           )}

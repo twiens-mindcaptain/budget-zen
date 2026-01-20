@@ -3,6 +3,9 @@
     "name": "Budget Zen",
     "tagline": "Minimalistischer, tastaturgesteuerter Ausgabentracker"
   },
+  "common": {
+    "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten"
+  },
   "auth": {
     "signIn": "Anmelden",
     "signOut": "Abmelden",
@@ -33,6 +36,8 @@
     "category": "Kategorie",
     "date": "Datum",
     "note": "Notiz",
+    "memo": "Memo",
+    "memoPlaceholder": "Optionales Memo",
     "optional": "optional",
     "required": "erforderlich",
     "save": "Speichern",
@@ -43,6 +48,7 @@
     "notePlaceholder": "Optionale Notiz",
     "selectAccount": "Konto auswählen",
     "selectCategory": "{type} Kategorie auswählen",
+    "selectCategoryShort": "Kategorie wählen (optional)",
     "dialogDescription": "Enter zum Speichern und Schließen. Cmd+Enter (oder Ctrl+Enter) zum Speichern und weitere hinzufügen.",
     "press": "Drücke",
     "toSaveAndClose": "zum Speichern und Schließen.",
@@ -51,6 +57,11 @@
     "income": "Einnahme",
     "expense": "Ausgabe",
     "uncategorized": "Ohne Kategorie",
+    "FIX": "Fix",
+    "VARIABLE": "Variabel",
+    "SF1": "Rücklage",
+    "SF2": "Sparziel",
+    "INCOME": "Einnahme",
     "formatExample": "Format-Beispiel",
     "editTransaction": "Transaktion bearbeiten",
     "editDescription": "Transaktionsdetails aktualisieren",
@@ -115,7 +126,10 @@
       "incomeCategories": "Einnahmekategorien",
       "expenseCategories": "Ausgabenkategorien",
       "noIncome": "Noch keine Einnahmekategorien. Erstelle eine, um zu beginnen.",
-      "noExpense": "Noch keine Ausgabenkategorien. Erstelle eine, um zu beginnen."
+      "noExpense": "Noch keine Ausgabenkategorien. Erstelle eine, um zu beginnen.",
+      "createSuccess": "Kategorie erfolgreich erstellt",
+      "updateSuccess": "Kategorie erfolgreich aktualisiert",
+      "deleteSuccess": "Kategorie erfolgreich gelöscht"
     },
     "accounts": {
       "title": "Konten",
@@ -151,12 +165,16 @@
   "budget": {
     "title": "Budget",
     "safeToSpend": "Verfügbar zum Ausgeben",
+    "availableToAssign": "Verfügbar zum Zuweisen",
     "totalCash": "Gesamtes Bargeld",
     "totalLiquid": "Gesamtes Barguthaben",
     "monthlyCommitted": "Monatlich gebunden",
     "pendingBills": "Ausstehende Rechnungen",
     "sinkingContributions": "Sparbeiträge",
-    "breakdown": "Aufschlüsselung",
+    "breakdown": "Übersicht",
+    "income": "Einnahmen",
+    "assigned": "Zugewiesen",
+    "saved": "gespart",
     "budgetType": "Budget-Typ",
     "targetAmount": "Zielbetrag",
     "frequency": "Frequenz",
@@ -168,10 +186,26 @@
     "due": "Fällig",
     "pending": "ausstehend",
     "noBills": "Keine monatlichen Rechnungen konfiguriert",
+    "undoPaymentHint": "Um die Zahlung rückgängig zu machen, lösche die Transaktion in der Liste unten",
     "noSinkingFunds": "Keine Sparfonds konfiguriert",
     "monthsRemaining": "Monate verbleibend",
     "markPaid": "Als bezahlt markieren",
     "progress": "Fortschritt",
+    "today": "Heute",
+    "toBeBudgeted": "Zu budgetieren",
+    "totalIncome": "Einnahmen",
+    "leftoverFromReset": "Überschuss",
+    "totalAssigned": "Zugewiesen",
+    "totalActivity": "Aktivität",
+    "overspent": "Überzogen",
+    "overBudgetedWarning": "Du hast mehr zugewiesen als verfügbar!",
+    "assigned": "Zugewiesen",
+    "activity": "Aktivität",
+    "available": "Verfügbar",
+    "startBalance": "Übertrag",
+    "assign": "Budget",
+    "quickAssign": "Schnell zuweisen",
+    "initializeMonth": "Monat initialisieren",
     "types": {
       "variable": "Variabel (Kein Budget)",
       "fixed": "Fest wiederkehrend",
@@ -187,7 +221,47 @@
       "variable": "Kein Budget-Tracking für diese Kategorie",
       "fixed": "Regelmäßige wiederkehrende Ausgabe (z.B. Miete, Abonnements)",
       "sinking_fund": "Sparziel für zukünftige Ausgabe (z.B. Urlaub, Auto)"
-    }
+    },
+    "zbbTypes": {
+      "FIX": "Fix",
+      "VARIABLE": "Variabel",
+      "SF1": "Rücklage (Priorität)",
+      "SF2": "Sparziel",
+      "INCOME": "Einnahme"
+    },
+    "types": {
+      "FIX": "Fix",
+      "VARIABLE": "Variabel",
+      "SF1": "Rücklage (Priorität)",
+      "SF2": "Sparziel",
+      "INCOME": "Einnahme"
+    },
+    "rolloverStrategy": "Übertrag-Strategie",
+    "rolloverStrategies": {
+      "ACCUMULATE": "Akkumulieren",
+      "RESET": "Zurücksetzen",
+      "SWEEP": "Bereinigen"
+    },
+    "strategies": {
+      "ACCUMULATE": "Akkumulieren",
+      "RESET": "Zurücksetzen",
+      "SWEEP": "Bereinigen"
+    },
+    "rolloverDescriptions": {
+      "ACCUMULATE": "Gesamten Saldo in nächsten Monat übertragen",
+      "RESET": "Jeden Monat bei Null beginnen",
+      "SWEEP": "Nur Überziehungen übertragen"
+    },
+    "typeDescriptions": {
+      "INCOME": "Eingehende Gelder (Gehalt, Freiberuflich, Geschenke)",
+      "FIX": "Regelmäßige Rechnungen mit festen Beträgen (Miete, Versicherung, Abos)",
+      "VARIABLE": "Flexible Ausgaben, die monatlich variieren (Lebensmittel, Freizeit)",
+      "SF1": "Monatlich sparen für bekannte Ausgaben mit Fälligkeitsdatum (KFZ-Versicherung, Urlaub)",
+      "SF2": "Langfristiges Sparziel ohne festes Datum (Notgroschen, neuer Laptop)"
+    },
+    "dueDate": "Fälligkeitsdatum",
+    "autoFillSuccess": "Betrag automatisch ausgefüllt",
+    "autoFillHint": "Vorgeschlagen: {amount}"
   },
   "budgetItems": {
     "title": "Budget-Positionen",

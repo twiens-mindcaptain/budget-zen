@@ -40,9 +40,9 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
     }
   )
 
-  // Separate categories by type
-  const incomeCategories = optimisticCategories.filter((c) => c.type === 'income')
-  const expenseCategories = optimisticCategories.filter((c) => c.type === 'expense')
+  // Separate categories by type (ZBB types)
+  const incomeCategories = optimisticCategories.filter((c) => c.type === 'INCOME')
+  const expenseCategories = optimisticCategories.filter((c) => c.type !== 'INCOME')
 
   const handleEditClick = (category: Category) => {
     setSelectedCategory(category)

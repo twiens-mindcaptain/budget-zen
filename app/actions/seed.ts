@@ -4,8 +4,8 @@ import { auth } from '@clerk/nextjs/server'
 import { getServerSupabase } from '@/lib/supabase'
 
 /**
- * Seeds default accounts and categories for a new user
- * Only runs if the user has no existing accounts
+ * Seeds default categories for a new user
+ * Only runs if the user has no existing categories
  * Also creates user profile if it doesn't exist
  *
  * @returns ApiResponse indicating success or failure
@@ -45,54 +45,26 @@ export async function seedUserDefaults() {
       }
     }
 
-    // 3. Check if user already has accounts
-    const { data: existingAccounts, error: checkError } = await getServerSupabase()
-      .from('accounts')
+    // 3. Check if user already has categories
+    const { data: existingCategories, error: checkError } = await getServerSupabase()
+      .from('categories')
       .select('id')
       .eq('user_id', userId)
       .limit(1)
 
     if (checkError) {
-      console.error('Error checking existing accounts:', checkError)
+      console.error('Error checking existing categories:', checkError)
       return {
         success: false,
-        error: 'Failed to check existing accounts',
+        error: 'Failed to check existing categories',
       }
     }
 
-    // If user already has accounts, do nothing
-    if (existingAccounts && existingAccounts.length > 0) {
+    // If user already has categories, do nothing
+    if (existingCategories && existingCategories.length > 0) {
       return {
         success: true,
-        message: 'User already has accounts, skipping seed',
-      }
-    }
-
-    // 3. Create default accounts
-    const defaultAccounts = [
-      {
-        user_id: userId,
-        name: 'Main Account',
-        type: 'bank',
-        initial_balance: '0.00',
-      },
-      {
-        user_id: userId,
-        name: 'Cash',
-        type: 'cash',
-        initial_balance: '0.00',
-      },
-    ]
-
-    const { error: accountsError } = await getServerSupabase()
-      .from('accounts')
-      .insert(defaultAccounts)
-
-    if (accountsError) {
-      console.error('Error creating default accounts:', accountsError)
-      return {
-        success: false,
-        error: 'Failed to create default accounts',
+        message: 'User already has categories, skipping seed',
       }
     }
 
@@ -179,7 +151,7 @@ export async function seedUserDefaults() {
 
     return {
       success: true,
-      message: 'Default accounts and categories created successfully',
+      message: 'Default categories created successfully',
     }
   } catch (error) {
     console.error('Unexpected error in seedUserDefaults:', error)

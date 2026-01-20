@@ -12,18 +12,15 @@ import {
   type SinkingFundItem,
   type SafeToSpendData,
 } from '@/lib/types'
+import { format } from 'date-fns'
 
 /**
  * Creates a new transaction in the database
- *
- * @param data - Transaction data matching insertTransactionSchema
- * @returns ApiResponse with success/error status
  */
 export async function createTransaction(
   data: unknown
 ): Promise<ApiResponse<Transaction>> {
   try {
-    // 1. Authenticate user via Clerk
     const { userId } = await auth()
 
     if (!userId) {
@@ -33,7 +30,6 @@ export async function createTransaction(
       }
     }
 
-    // 2. Validate input with Zod
     const validationResult = insertTransactionSchema.safeParse(data)
 
     if (!validationResult.success) {
@@ -60,29 +56,27 @@ export async function createTransaction(
         .eq('id', validatedData.category_id)
         .single()
 
-      // Income = positive, Expense = negative
-      if (category?.type === 'expense') {
+      // INCOME = positive, all others = negative
+      // Handle both 'INCOME' (new ZBB) and 'income' (legacy) types
+      if (category?.type?.toUpperCase() !== 'INCOME') {
         finalAmount = -finalAmount
       }
     } else {
       // No category: check if amount starts with + (income) or treat as expense
       const amountStr = validatedData.amount.toString()
       if (!amountStr.startsWith('+')) {
-        // Default: treat as expense (negative)
         finalAmount = -finalAmount
       }
     }
 
-    // 3. Insert into Supabase transactions table
     const { data: transaction, error: insertError } = await getServerSupabase()
       .from('transactions')
       .insert({
         user_id: userId,
-        account_id: validatedData.account_id,
         category_id: validatedData.category_id || null,
         amount: finalAmount.toString(),
-        date: validatedData.date || new Date().toISOString(),
-        note: validatedData.note || null,
+        date: validatedData.date && /^\d{4}-\d{2}-\d{2}$/.test(validatedData.date) ? validatedData.date : format(new Date(), 'yyyy-MM-dd'),
+        memo: validatedData.memo || null,
       })
       .select()
       .single()
@@ -95,10 +89,8 @@ export async function createTransaction(
       }
     }
 
-    // 4. Revalidate the dashboard path
     revalidatePath('/')
 
-    // 5. Return success response
     return {
       success: true,
       data: transaction as Transaction,
@@ -113,12 +105,9 @@ export async function createTransaction(
 }
 
 /**
- * Fetches recent transactions for the current user
- *
- * @param limit - Number of transactions to fetch (default: 50)
- * @returns Array of transactions with category and account data
+ * Fetches transactions for the current user, optionally for a specific month
  */
-export async function getRecentTransactions(limit: number = 50) {
+export async function getRecentTransactions(limit: number = 50, monthDate?: Date) {
   try {
     const { userId } = await auth()
 
@@ -126,17 +115,25 @@ export async function getRecentTransactions(limit: number = 50) {
       throw new Error('Unauthorized')
     }
 
-    const { data, error } = await getServerSupabase()
+    let query = getServerSupabase()
       .from('transactions')
       .select(`
         *,
-        category:categories(*),
-        account:accounts(*)
+        category:categories(*)
       `)
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(limit)
+
+    // If monthDate is provided, filter to that month only
+    if (monthDate) {
+      const startOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1), 'yyyy-MM-dd')
+      const endOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0), 'yyyy-MM-dd')
+      query = query.gte('date', startOfMonth).lte('date', endOfMonth)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('Supabase fetch error:', error)
@@ -151,36 +148,7 @@ export async function getRecentTransactions(limit: number = 50) {
 }
 
 /**
- * Fetches all accounts for the current user
- */
-export async function getAccounts() {
-  try {
-    const { userId } = await auth()
-
-    if (!userId) {
-      throw new Error('Unauthorized')
-    }
-
-    const { data, error } = await getServerSupabase()
-      .from('accounts')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-
-    if (error) {
-      console.error('Supabase fetch error:', error)
-      throw new Error(`Failed to fetch accounts: ${error.message}`)
-    }
-
-    return data || []
-  } catch (error) {
-    console.error('Error in getAccounts:', error)
-    throw error
-  }
-}
-
-/**
- * Fetches all categories for the current user
+ * Fetches all active categories for the current user
  */
 export async function getCategories() {
   try {
@@ -194,7 +162,8 @@ export async function getCategories() {
       .from('categories')
       .select('*')
       .eq('user_id', userId)
-      .order('type', { ascending: false }) // 'income' before 'expense'
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
 
     if (error) {
@@ -210,9 +179,10 @@ export async function getCategories() {
 }
 
 /**
- * Calculates monthly statistics (income, expenses, balance) for the current month
+ * Calculates monthly statistics (income, expenses, balance) for a specific month
+ * Uses category type to determine income vs expense (not just amount sign)
  */
-export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
+export async function getMonthlyStatistics(monthDate: Date = new Date()): Promise<MonthlyStatistics> {
   try {
     const { userId } = await auth()
 
@@ -220,36 +190,43 @@ export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
       throw new Error('Unauthorized')
     }
 
-    // Get start and end of current month
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+    const startOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1), 'yyyy-MM-dd')
+    const endOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0), 'yyyy-MM-dd')
 
-    // Fetch all transactions for this month
+    // Get all transactions for the month with category info joined
     const { data, error } = await getServerSupabase()
       .from('transactions')
-      .select('amount')
+      .select(`
+        amount,
+        category:categories(type)
+      `)
       .eq('user_id', userId)
-      .gte('date', startOfMonth.toISOString())
-      .lte('date', endOfMonth.toISOString())
+      .gte('date', startOfMonth)
+      .lte('date', endOfMonth)
 
     if (error) {
       console.error('Supabase fetch error:', error)
       throw new Error(`Failed to fetch monthly statistics: ${error.message}`)
     }
 
-    // Calculate totals from signed amounts
-    // Positive amounts = income, Negative amounts = expense
     let totalIncome = 0
     let totalExpenses = 0
 
-    data?.forEach((transaction: any) => {
-      const amount = parseFloat(transaction.amount)
+    data?.forEach((transaction) => {
+      const amount = Math.abs(parseFloat(transaction.amount))
 
-      if (amount > 0) {
+      // Supabase returns related data - could be object or array depending on relationship
+      const categoryData = transaction.category
+      const category = Array.isArray(categoryData) ? categoryData[0] : categoryData
+
+      // Check if transaction belongs to an income category (case-insensitive)
+      const isIncome = category?.type?.toUpperCase() === 'INCOME'
+
+      if (isIncome) {
         totalIncome += amount
-      } else if (amount < 0) {
-        totalExpenses += Math.abs(amount)
+      } else if (amount > 0) {
+        // Expense (use absolute value since amounts might be stored as negative)
+        totalExpenses += amount
       }
     })
 
@@ -268,17 +245,12 @@ export async function getMonthlyStatistics(): Promise<MonthlyStatistics> {
 
 /**
  * Updates an existing transaction in the database
- *
- * @param transactionId - UUID of the transaction to update
- * @param data - Updated transaction data matching insertTransactionSchema
- * @returns ApiResponse with success/error status
  */
 export async function updateTransaction(
   transactionId: string,
   data: unknown
 ): Promise<ApiResponse<Transaction>> {
   try {
-    // 1. Authenticate user via Clerk
     const { userId } = await auth()
 
     if (!userId) {
@@ -288,7 +260,6 @@ export async function updateTransaction(
       }
     }
 
-    // 2. Validate input with Zod
     const validationResult = insertTransactionSchema.safeParse(data)
 
     if (!validationResult.success) {
@@ -304,42 +275,36 @@ export async function updateTransaction(
 
     const validatedData = validationResult.data
 
-    // Determine transaction type and normalize amount with sign
     let finalAmount = Math.abs(parseFloat(validatedData.amount))
 
     if (validatedData.category_id) {
-      // If category is selected, determine type from category
       const { data: category } = await getServerSupabase()
         .from('categories')
         .select('type')
         .eq('id', validatedData.category_id)
         .single()
 
-      // Income = positive, Expense = negative
-      if (category?.type === 'expense') {
+      // Handle both 'INCOME' (new ZBB) and 'income' (legacy) types
+      if (category?.type?.toUpperCase() !== 'INCOME') {
         finalAmount = -finalAmount
       }
     } else {
-      // No category: check if amount starts with + (income) or treat as expense
       const amountStr = validatedData.amount.toString()
       if (!amountStr.startsWith('+')) {
-        // Default: treat as expense (negative)
         finalAmount = -finalAmount
       }
     }
 
-    // 3. Verify ownership and update transaction
     const { data: transaction, error: updateError } = await getServerSupabase()
       .from('transactions')
       .update({
-        account_id: validatedData.account_id,
         category_id: validatedData.category_id || null,
         amount: finalAmount.toString(),
-        date: validatedData.date || new Date().toISOString(),
-        note: validatedData.note || null,
+        date: validatedData.date && /^\d{4}-\d{2}-\d{2}$/.test(validatedData.date) ? validatedData.date : format(new Date(), 'yyyy-MM-dd'),
+        memo: validatedData.memo || null,
       })
       .eq('id', transactionId)
-      .eq('user_id', userId) // Ensure user owns this transaction
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -351,10 +316,8 @@ export async function updateTransaction(
       }
     }
 
-    // 4. Revalidate the dashboard path
     revalidatePath('/')
 
-    // 5. Return success response
     return {
       success: true,
       data: transaction as Transaction,
@@ -370,15 +333,11 @@ export async function updateTransaction(
 
 /**
  * Deletes a transaction from the database
- *
- * @param transactionId - UUID of the transaction to delete
- * @returns ApiResponse with success/error status
  */
 export async function deleteTransaction(
   transactionId: string
 ): Promise<ApiResponse<null>> {
   try {
-    // 1. Authenticate user via Clerk
     const { userId } = await auth()
 
     if (!userId) {
@@ -388,12 +347,11 @@ export async function deleteTransaction(
       }
     }
 
-    // 2. Delete transaction (ownership check via user_id)
     const { error: deleteError } = await getServerSupabase()
       .from('transactions')
       .delete()
       .eq('id', transactionId)
-      .eq('user_id', userId) // Ensure user owns this transaction
+      .eq('user_id', userId)
 
     if (deleteError) {
       console.error('Supabase delete error:', deleteError)
@@ -403,10 +361,8 @@ export async function deleteTransaction(
       }
     }
 
-    // 3. Revalidate the dashboard path
     revalidatePath('/')
 
-    // 4. Return success response
     return {
       success: true,
       data: null,
@@ -421,56 +377,50 @@ export async function deleteTransaction(
 }
 
 /**
- * Get bills checklist for current month
- * Returns monthly budget items with payment status
+ * Get bills checklist for a specific month
+ * Returns FIX categories with target_amount and payment status
  */
-export async function getBillsChecklist(): Promise<BillItem[]> {
+export async function getBillsChecklist(monthDate: Date = new Date()): Promise<BillItem[]> {
   const { userId } = await auth()
   if (!userId) throw new Error('Unauthorized')
 
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+  const startOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1), 'yyyy-MM-dd')
+  const endOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0), 'yyyy-MM-dd')
 
-  // Get monthly budget items with category info
-  const { data: items, error } = await getServerSupabase()
-    .from('budget_items')
-    .select(`
-      id,
-      name,
-      category_id,
-      monthly_impact,
-      category:categories(name, translation_key, icon, color)
-    `)
+  // Get all FIX categories with target amounts
+  const { data: categories, error } = await getServerSupabase()
+    .from('categories')
+    .select('id, name, icon, color, target_amount')
     .eq('user_id', userId)
-    .eq('frequency', 'monthly')
-    .order('name', { ascending: true })
+    .eq('type', 'FIX')
+    .eq('is_active', true)
+    .not('target_amount', 'is', null)
+    .order('sort_order', { ascending: true })
 
-  if (error) throw new Error('Failed to fetch bills')
+  if (error) {
+    console.error('Failed to fetch FIX categories:', error)
+    return [] // Return empty array instead of throwing
+  }
 
-  // For each item, check if paid this month
   const bills: BillItem[] = []
 
-  for (const item of items || []) {
+  for (const category of categories || []) {
+    // Check if there's a transaction this month for this category
     const { data: transactions } = await getServerSupabase()
       .from('transactions')
       .select('id')
       .eq('user_id', userId)
-      .eq('category_id', item.category_id)
-      .gte('date', startOfMonth.toISOString())
-      .lte('date', endOfMonth.toISOString())
+      .eq('category_id', category.id)
+      .gte('date', startOfMonth)
+      .lte('date', endOfMonth)
       .limit(1)
 
-    const category = Array.isArray(item.category) ? item.category[0] : item.category
-
     bills.push({
-      id: item.id,
-      name: item.name,
-      category_id: item.category_id,
-      category_name: category?.name || null,
-      category_icon: category?.icon || 'HelpCircle',
-      category_color: category?.color || '#71717a',
-      monthly_impact: item.monthly_impact,
+      id: category.id,
+      name: category.name || 'Unnamed',
+      icon: category.icon || 'HelpCircle',
+      color: category.color || '#71717a',
+      target_amount: category.target_amount || '0.00',
       is_paid: !!(transactions && transactions.length > 0),
     })
   }
@@ -480,156 +430,163 @@ export async function getBillsChecklist(): Promise<BillItem[]> {
 
 /**
  * Get sinking funds with progress
- * Returns non-monthly budget items with saved balance
+ * Returns SF1/SF2 categories with saved balance
+ *
+ * Saved balance calculation:
+ * - Sum only assigned_amount from all months (NOT start_balance, which already contains carryover)
+ * - Subtract total spent (negative transactions)
  */
 export async function getSinkingFunds(): Promise<SinkingFundItem[]> {
   const { userId } = await auth()
   if (!userId) throw new Error('Unauthorized')
 
-  const { data: items, error } = await getServerSupabase()
-    .from('budget_items')
-    .select(`
-      id,
-      name,
-      category_id,
-      amount,
-      monthly_impact,
-      saved_balance,
-      category:categories(name, translation_key, icon, color)
-    `)
+  // Get all SF1 and SF2 categories
+  const { data: categories, error } = await getServerSupabase()
+    .from('categories')
+    .select('id, name, icon, color, target_amount, due_date')
     .eq('user_id', userId)
-    .neq('frequency', 'monthly')
-    .order('name', { ascending: true })
+    .in('type', ['SF1', 'SF2'])
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
 
-  if (error) throw new Error('Failed to fetch sinking funds')
+  if (error) {
+    console.error('Failed to fetch sinking fund categories:', error)
+    return []
+  }
 
-  return (items || []).map((item) => {
-    const category = Array.isArray(item.category) ? item.category[0] : item.category
-    const targetAmount = parseFloat(item.amount)
-    const savedBalance = parseFloat(item.saved_balance)
-    const progressPercentage =
-      targetAmount > 0 ? Math.min((savedBalance / targetAmount) * 100, 100) : 0
+  const funds: SinkingFundItem[] = []
 
-    return {
-      id: item.id,
-      name: item.name,
-      category_id: item.category_id,
-      category_name: category?.name || null,
-      category_icon: category?.icon || 'HelpCircle',
-      category_color: category?.color || '#71717a',
-      amount: item.amount,
-      monthly_impact: item.monthly_impact,
-      saved_balance: item.saved_balance,
+  for (const category of categories || []) {
+    // Calculate total assigned from monthly_budgets (all time)
+    // IMPORTANT: Only sum assigned_amount, NOT start_balance!
+    // start_balance already contains carryover from previous months
+    // Summing both would double-count the accumulated savings
+    const { data: budgets } = await getServerSupabase()
+      .from('monthly_budgets')
+      .select('assigned_amount')
+      .eq('user_id', userId)
+      .eq('category_id', category.id)
+
+    const totalAssigned = (budgets || []).reduce((sum, budget) => {
+      return sum + parseFloat(budget.assigned_amount || '0')
+    }, 0)
+
+    // Calculate total spent (all time) - expenses are negative amounts
+    const { data: transactions } = await getServerSupabase()
+      .from('transactions')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('category_id', category.id)
+
+    const totalSpent = (transactions || []).reduce((sum, tx) => {
+      const amount = parseFloat(tx.amount)
+      // Only count negative amounts (expenses)
+      return amount < 0 ? sum + Math.abs(amount) : sum
+    }, 0)
+
+    // Saved balance = what was assigned minus what was spent
+    const savedBalance = Math.max(0, totalAssigned - totalSpent)
+
+    const targetAmount = parseFloat(category.target_amount || '0')
+    const progressPercentage = targetAmount > 0
+      ? Math.min((savedBalance / targetAmount) * 100, 100)
+      : 0
+
+    funds.push({
+      id: category.id,
+      name: category.name || 'Unnamed',
+      icon: category.icon || 'PiggyBank',
+      color: category.color || '#71717a',
+      target_amount: category.target_amount || '0.00',
+      due_date: category.due_date,
+      saved_balance: savedBalance.toFixed(2),
       progress_percentage: Math.round(progressPercentage),
-    }
-  })
+    })
+  }
+
+  return funds
 }
 
 /**
- * Calculate Safe-to-Spend with NEW formula
- * Formula: Total Liquid - Pending Bills - Sinking Contributions
+ * Calculate Safe to Spend (ZBB style)
+ * Formula: Total Income - Total Assigned = Available to Assign
  */
-export async function getSafeToSpend(): Promise<SafeToSpendData> {
+export async function getSafeToSpend(monthDate: Date = new Date()): Promise<SafeToSpendData> {
   const { userId } = await auth()
   if (!userId) throw new Error('Unauthorized')
 
-  // 1. Calculate Total Liquid (sum of all account balances)
-  const { data: accounts, error: accountsError } = await getServerSupabase()
-    .from('accounts')
-    .select('id, initial_balance')
+  const monthIso = format(monthDate, 'yyyy-MM')
+  const startOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1), 'yyyy-MM-dd')
+  const endOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0), 'yyyy-MM-dd')
+
+  // Get all income transactions this month
+  const { data: incomeTransactions } = await getServerSupabase()
+    .from('transactions')
+    .select('amount, category:categories!inner(type)')
     .eq('user_id', userId)
+    .gte('date', startOfMonth)
+    .lte('date', endOfMonth)
 
-  if (accountsError) {
-    console.error('Error fetching accounts:', accountsError)
-    throw new Error('Failed to fetch accounts')
-  }
+  // Calculate total income (positive amounts from INCOME categories)
+  const totalIncome = (incomeTransactions || []).reduce((sum, tx) => {
+    const amount = parseFloat(tx.amount)
+    return amount > 0 ? sum + amount : sum
+  }, 0)
 
-  let totalLiquid = 0
+  // Get all assigned amounts for this month
+  const { data: budgets } = await getServerSupabase()
+    .from('monthly_budgets')
+    .select('assigned_amount')
+    .eq('user_id', userId)
+    .eq('month_iso', monthIso)
 
-  if (accounts && accounts.length > 0) {
-    for (const account of accounts) {
-      const initialBalance = parseFloat(account.initial_balance)
+  const totalAssigned = (budgets || []).reduce((sum, budget) => {
+    return sum + parseFloat(budget.assigned_amount || '0')
+  }, 0)
 
-      const { data: transactions, error: transError } = await getServerSupabase()
-        .from('transactions')
-        .select('amount')
-        .eq('account_id', account.id)
-        .eq('user_id', userId)
-
-      if (transError) {
-        console.error('Error fetching transactions:', transError)
-        continue
-      }
-
-      const transactionsSum = (transactions || []).reduce(
-        (sum, t) => sum + parseFloat(t.amount),
-        0
-      )
-
-      totalLiquid += initialBalance + transactionsSum
-    }
-  }
-
-  // 2. Get unpaid bills (monthly items not paid this month)
-  const bills = await getBillsChecklist()
-  const pendingBills = bills
-    .filter((bill) => !bill.is_paid)
-    .reduce((sum, bill) => sum + parseFloat(bill.monthly_impact), 0)
-
-  // 3. Get sinking funds contributions (always deducted)
-  const funds = await getSinkingFunds()
-  const sinkingContributions = funds.reduce(
-    (sum, fund) => sum + parseFloat(fund.monthly_impact),
-    0
-  )
-
-  // 4. Calculate Safe to Spend
-  const safeToSpend = totalLiquid - pendingBills - sinkingContributions
+  // Available to assign = Income - Assigned
+  const availableToAssign = totalIncome - totalAssigned
 
   return {
-    safeToSpend: safeToSpend.toFixed(2),
-    totalLiquid: totalLiquid.toFixed(2),
-    pendingBills: pendingBills.toFixed(2),
-    sinkingContributions: sinkingContributions.toFixed(2),
+    safeToSpend: availableToAssign.toFixed(2),
+    totalIncome: totalIncome.toFixed(2),
+    totalAssigned: totalAssigned.toFixed(2),
+    availableToAssign: availableToAssign.toFixed(2),
   }
 }
 
 /**
  * Mark a bill as paid by creating a transaction
  */
-export async function markBillPaid(
-  billId: string,
-  accountId: string
-): Promise<ApiResponse<Transaction>> {
+export async function markBillPaid(categoryId: string): Promise<ApiResponse<Transaction>> {
   const { userId } = await auth()
   if (!userId) {
     return { success: false, error: 'Unauthorized' }
   }
 
-  // Get budget item details
-  const { data: item, error: itemError } = await getServerSupabase()
-    .from('budget_items')
-    .select('category_id, monthly_impact')
-    .eq('id', billId)
+  // Get category details
+  const { data: category, error: categoryError } = await getServerSupabase()
+    .from('categories')
+    .select('id, target_amount, name')
+    .eq('id', categoryId)
     .eq('user_id', userId)
     .single()
 
-  if (itemError || !item) {
-    return { success: false, error: 'Budget item not found' }
+  if (categoryError || !category) {
+    return { success: false, error: 'Category not found' }
   }
 
   // Create transaction (negative amount for expense)
-  const amount = -Math.abs(parseFloat(item.monthly_impact))
+  const amount = -Math.abs(parseFloat(category.target_amount || '0'))
 
   const { data: transaction, error: txError } = await getServerSupabase()
     .from('transactions')
     .insert({
       user_id: userId,
-      account_id: accountId,
-      category_id: item.category_id,
+      category_id: category.id,
       amount: amount.toString(),
-      date: new Date().toISOString(),
-      note: 'Bill payment',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      memo: `Bill payment: ${category.name}`,
     })
     .select()
     .single()

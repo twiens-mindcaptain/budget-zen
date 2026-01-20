@@ -1,37 +1,31 @@
 'use client'
 
 import { format } from 'date-fns'
+import { de, enUS } from 'date-fns/locale'
 import { useTranslations } from 'next-intl'
 import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
 import { DeleteTransactionDialog } from '@/components/transactions/delete-transaction-dialog'
 import { getCategoryIcon } from '@/lib/icon-mapper'
 import { getCategoryDisplayName } from '@/lib/i18n-helpers'
-import { formatCurrency } from '@/lib/currency'
+import { formatCurrency, parseLocalDate } from '@/lib/currency'
 
 interface Transaction {
   id: string
   amount: string
   date: string
-  note: string | null
-  account_id: string
+  memo: string | null
   category_id: string | null
   category?: {
     id: string
     name: string | null
-    translation_key: string | null
-    icon: string
-    color: string
-    type: 'income' | 'expense'
-  } | null
-  account?: {
-    id: string
-    name: string
+    icon: string | null
+    color: string | null
+    type: string // ZBB type: FIX, VARIABLE, SF1, SF2, INCOME
   } | null
 }
 
 interface TransactionListProps {
   initialTransactions: Transaction[]
-  accounts: any[]
   categories: any[]
   currency: string
   locale: string
@@ -41,7 +35,6 @@ interface TransactionListProps {
 
 export function TransactionList({
   initialTransactions,
-  accounts,
   categories,
   currency,
   locale,
@@ -67,7 +60,7 @@ export function TransactionList({
   return (
     <div className="space-y-2">
       {initialTransactions.map((transaction) => {
-        const isIncome = transaction.category?.type === 'income'
+        const isIncome = transaction.category?.type === 'INCOME'
         const amount = parseFloat(transaction.amount)
         const CategoryIcon = getCategoryIcon(transaction.category?.icon || 'HelpCircle')
 
@@ -96,25 +89,19 @@ export function TransactionList({
                 </div>
               </div>
 
-              {/* Middle: Category, Account, Date */}
+              {/* Middle: Category and Date */}
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-zinc-900">
                   {transaction.category
                     ? getCategoryDisplayName(transaction.category, t)
                     : t('transaction.uncategorized')}
                 </div>
-                <div className="text-sm text-zinc-500 flex items-center gap-1.5">
-                  <span className="truncate">
-                    {transaction.account?.name || 'Unknown'}
-                  </span>
-                  <span>•</span>
-                  <span className="whitespace-nowrap">
-                    {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                  </span>
+                <div className="text-sm text-zinc-500">
+                  {format(parseLocalDate(transaction.date), 'PP', { locale: locale === 'de-DE' ? de : enUS })}
                 </div>
-                {transaction.note && (
+                {transaction.memo && (
                   <div className="text-sm text-zinc-500 mt-1 truncate">
-                    {transaction.note}
+                    {transaction.memo}
                   </div>
                 )}
               </div>
@@ -140,7 +127,6 @@ export function TransactionList({
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <EditTransactionDialog
                     transaction={transaction}
-                    accounts={accounts}
                     categories={categories}
                     currency={currency}
                     locale={locale}

@@ -1,4 +1,25 @@
 /**
+ * Parses a date string (YYYY-MM-DD) as a local date, not UTC.
+ * This prevents timezone issues where "2025-02-01" becomes Jan 31st in certain timezones.
+ */
+export function parseLocalDate(dateStr: string | Date): Date {
+  // If already a Date object, return it
+  if (dateStr instanceof Date) {
+    return dateStr
+  }
+
+  // Handle ISO strings with time component (from database timestamps)
+  if (dateStr.includes('T')) {
+    // Extract just the date part
+    dateStr = dateStr.split('T')[0]
+  }
+
+  // Parse YYYY-MM-DD format as local date
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+/**
  * Currency configuration with symbol and position
  */
 interface CurrencyConfig {

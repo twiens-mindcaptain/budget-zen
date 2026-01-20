@@ -12,14 +12,12 @@ import { toast } from 'sonner'
 
 interface BillsChecklistProps {
   initialBills: BillItem[]
-  accounts: any[]
   currency: string
   locale: string
 }
 
 export function BillsChecklist({
   initialBills,
-  accounts,
   currency,
   locale,
 }: BillsChecklistProps) {
@@ -37,20 +35,14 @@ export function BillsChecklist({
 
   const handleBillToggle = async (bill: BillItem) => {
     if (bill.is_paid) {
-      toast.info('To undo payment, delete the transaction from the list below')
-      return
-    }
-
-    const defaultAccount = accounts[0]
-    if (!defaultAccount) {
-      toast.error('No account found. Please create an account first.')
+      toast.info(t('budget.undoPaymentHint'))
       return
     }
 
     setPendingBillId(bill.id)
     updateOptimisticBills(bill.id)
 
-    const result = await markBillPaid(bill.id, defaultAccount.id)
+    const result = await markBillPaid(bill.id)
     setPendingBillId(null)
 
     if (result.success) {
@@ -63,7 +55,7 @@ export function BillsChecklist({
 
   const unpaidTotal = optimisticBills
     .filter((b) => !b.is_paid)
-    .reduce((sum, b) => sum + parseFloat(b.monthly_impact), 0)
+    .reduce((sum, b) => sum + parseFloat(b.target_amount), 0)
 
   return (
     <Card>
@@ -85,7 +77,7 @@ export function BillsChecklist({
           </div>
         ) : (
           optimisticBills.map((bill) => {
-            const CategoryIcon = getCategoryIcon(bill.category_icon)
+            const CategoryIcon = getCategoryIcon(bill.icon)
             const isPending = pendingBillId === bill.id
 
             return (
@@ -113,11 +105,11 @@ export function BillsChecklist({
 
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${bill.category_color}15` }}
+                  style={{ backgroundColor: `${bill.color}15` }}
                 >
                   <CategoryIcon
                     className="w-4 h-4"
-                    style={{ color: bill.category_color }}
+                    style={{ color: bill.color }}
                   />
                 </div>
 
@@ -136,7 +128,7 @@ export function BillsChecklist({
                     bill.is_paid ? 'text-zinc-500' : 'text-zinc-900'
                   }`}
                 >
-                  {formatCurrency(parseFloat(bill.monthly_impact), currency, '', locale)}
+                  {formatCurrency(parseFloat(bill.target_amount), currency, '', locale)}
                 </div>
               </button>
             )

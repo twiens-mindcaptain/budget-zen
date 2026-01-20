@@ -11,7 +11,6 @@ import { getCategoryDisplayName } from '@/lib/i18n-helpers'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -34,24 +33,24 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { updateTransaction } from '@/app/actions/transaction'
-import { insertTransactionSchema, type InsertTransactionInput, type Account, type Category } from '@/lib/types'
-import { formatCurrency } from '@/lib/currency'
+import { insertTransactionSchema, type InsertTransactionInput, type Category } from '@/lib/types'
+import { formatCurrency, parseLocalDate } from '@/lib/currency'
+import { toast } from 'sonner'
 
 interface EditTransactionDialogProps {
-  transaction: any // Full transaction object with category and account data
-  accounts: Account[]
+  transaction: any // Full transaction object with category data
   categories: Category[]
   currency: string
   locale: string
   onOptimisticUpdate?: (transaction: any) => void
 }
 
-export function EditTransactionDialog({ transaction, accounts, categories, currency, locale, onOptimisticUpdate }: EditTransactionDialogProps) {
+export function EditTransactionDialog({ transaction, categories, currency, locale, onOptimisticUpdate }: EditTransactionDialogProps) {
   const t = useTranslations()
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>(
-    transaction.category?.type || 'expense'
+    transaction.category?.type === 'INCOME' ? 'income' : 'expense'
   )
   const amountInputRef = useRef<HTMLInputElement>(null)
 
@@ -68,11 +67,10 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
   const form = useForm<InsertTransactionInput>({
     resolver: zodResolver(insertTransactionSchema),
     defaultValues: {
-      account_id: transaction.account_id || accounts[0]?.id || '',
       category_id: transaction.category_id || '',
       amount: parseAmount(transaction.amount),
-      date: format(new Date(transaction.date), "yyyy-MM-dd'T'HH:mm"),
-      note: transaction.note || '',
+      date: format(parseLocalDate(transaction.date), 'yyyy-MM-dd'),
+      memo: transaction.memo || '',
     },
   })
 
@@ -87,8 +85,12 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
       const currentCategoryId = form.getValues('category_id')
       if (currentCategoryId) {
         const currentCategory = categories.find(cat => cat.id === currentCategoryId)
-        if (currentCategory && currentCategory.type !== newType) {
-          form.setValue('category_id', '')
+        if (currentCategory) {
+          const currentIsIncome = currentCategory.type === 'INCOME'
+          const newIsIncome = newType === 'income'
+          if (currentIsIncome !== newIsIncome) {
+            form.setValue('category_id', '')
+          }
         }
       }
     }
@@ -157,7 +159,6 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
 
       // Find the selected category to get full category info
       const selectedCategory = categories.find(cat => cat.id === normalizedData.category_id)
-      const selectedAccount = accounts.find(acc => acc.id === normalizedData.account_id)
 
       // Optimistically update UI before server responds
       if (onOptimisticUpdate) {
@@ -165,8 +166,8 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
         let finalAmount = Math.abs(parseFloat(normalizedData.amount))
 
         if (selectedCategory) {
-          // Income = positive, Expense = negative
-          if (selectedCategory.type === 'expense') {
+          // Income (INCOME type) = positive, Expense (FIX, VARIABLE, SF1, SF2) = negative
+          if (selectedCategory.type !== 'INCOME') {
             finalAmount = -finalAmount
           }
         } else {
@@ -183,7 +184,6 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
           ...normalizedData,
           amount: finalAmount.toString(),
           category: selectedCategory || null,
-          account: selectedAccount || null,
         }
         onOptimisticUpdate(optimisticTransaction)
         // Close dialog immediately for better UX
@@ -198,9 +198,8 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
           setOpen(false)
         }
       } else {
-        // Show error (you could use a toast notification here)
         console.error('Transaction update failed:', result.error)
-        alert(result.error)
+        toast.error(result.error)
         // Reopen dialog if there was an error
         if (onOptimisticUpdate) {
           setOpen(true)
@@ -208,7 +207,7 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
       }
     } catch (error) {
       console.error('Unexpected error:', error)
-      alert('An unexpected error occurred')
+      toast.error(t('common.unexpectedError'))
       // Reopen dialog if there was an error
       if (onOptimisticUpdate) {
         setOpen(true)
@@ -216,14 +215,16 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
     } finally {
       setIsSubmitting(false)
     }
-  }, [transaction, categories, accounts, onOptimisticUpdate])
+  }, [transaction, categories, onOptimisticUpdate])
 
   const onSubmit = (data: InsertTransactionInput) => {
     handleSubmit(data)
   }
 
-  // Filter categories based on transaction type
-  const filteredCategories = categories.filter(cat => cat.type === transactionType)
+  // Filter categories based on transaction type (INCOME for income, everything else for expense)
+  const filteredCategories = categories.filter(cat =>
+    transactionType === 'income' ? cat.type === 'INCOME' : cat.type !== 'INCOME'
+  )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -232,12 +233,9 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{t('transaction.editTransaction')}</DialogTitle>
-          <DialogDescription>
-            {t('transaction.editDescription')}
-          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -251,61 +249,34 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('transaction.amount')} *</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>{t('transaction.amount')}</FormLabel>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        transactionType === 'income'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {t(`transaction.${transactionType}`)}
+                    </span>
+                  </div>
                   <FormControl>
                     <Input
                       {...field}
                       ref={amountInputRef}
                       type="text"
                       inputMode="decimal"
-                      placeholder={t('transaction.amountPlaceholder')}
+                      placeholder={exampleAmount}
                       disabled={isSubmitting}
                       onKeyDown={handleAmountKeyPress}
                       onChange={(e) => {
                         field.onChange(e)
                         updateTransactionType(e.target.value)
                       }}
-                      className="text-lg font-semibold"
+                      className="text-xl font-semibold h-12"
                     />
                   </FormControl>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {transactionType === 'income' ? `💚 ${t('transaction.income')}` : `💸 ${t('transaction.expense')}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t('transaction.formatExample')}: {exampleAmount}
-                    </p>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Account Selector */}
-            <FormField
-              control={form.control}
-              name="account_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('transaction.account')} *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('transaction.selectAccount')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name} ({t(`accountTypes.${account.type}`)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -325,7 +296,7 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t('transaction.selectCategory', { type: t(`transaction.${transactionType}`) }) + ` (${t('transaction.optional')})`} />
+                        <SelectValue placeholder={t('transaction.selectCategoryShort')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -350,44 +321,45 @@ export function EditTransactionDialog({ transaction, accounts, categories, curre
               )}
             />
 
-            {/* Date Field */}
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('transaction.date')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="datetime-local"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Date and Memo in a row */}
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('transaction.date')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="date"
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Note Field */}
-            <FormField
-              control={form.control}
-              name="note"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('transaction.note')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="text"
-                      placeholder={t('transaction.notePlaceholder')}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="memo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('transaction.memo')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder={t('transaction.memoPlaceholder')}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Submit Button */}
             <div className="flex justify-end gap-2 pt-4">

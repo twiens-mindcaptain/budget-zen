@@ -1,55 +1,48 @@
 import { z } from 'zod'
 
 // ============================================
-// DATABASE TYPES (matching Supabase schema)
+// DATABASE TYPES (matching actual Supabase schema)
 // ============================================
 
-export type AccountType = 'cash' | 'bank' | 'credit' | 'savings'
-export type CategoryType = 'income' | 'expense'
+/**
+ * ZBB Category Types
+ * - FIX: Fixed monthly expenses (rent, insurance)
+ * - VARIABLE: Variable expenses (groceries, entertainment)
+ * - SF1: Sinking Funds Priority - deterministic savings for known future expenses
+ * - SF2: Savings Goals - flexible savings targets
+ * - INCOME: Income categories
+ */
+export type ZBBCategoryType = 'FIX' | 'VARIABLE' | 'SF1' | 'SF2' | 'INCOME'
+
+/**
+ * Rollover Strategy - defines month-end behavior
+ * - ACCUMULATE: Carry over entire balance (positive or negative) to next month
+ * - RESET: Start fresh each month (no carryover)
+ * - SWEEP: Only carry over negative balances (overspending), positive goes to savings
+ */
+export type RolloverStrategy = 'ACCUMULATE' | 'RESET' | 'SWEEP'
 
 export interface Profile {
   user_id: string
   currency: string
-  theme_preference: string
+  locale: string
+  onboarding_completed: boolean
   created_at: string
 }
-
-export interface Account {
-  id: string // uuid
-  user_id: string
-  name: string
-  type: AccountType
-  initial_balance: string // decimal(12,2) - stored as string to avoid float precision issues
-  created_at: string
-}
-
-export type BudgetType = 'variable' | 'fixed' | 'sinking_fund'
-export type BudgetFrequency = 'monthly' | 'quarterly' | 'semi_annual' | 'annual'
 
 export interface Category {
   id: string // uuid
   user_id: string
-  name: string | null // User-created categories have a name
-  translation_key: string | null // System categories have a translation key (e.g., 'category.groceries')
-  icon: string | null // Emoji or Lucide icon name
-  color: string | null // Hex code
-  type: CategoryType
-  budget_type: BudgetType // Budget tracking type
-  target_amount: string | null // Target amount for fixed/sinking_fund budgets (decimal)
-  frequency: BudgetFrequency // Budget frequency
-  monthly_target: string | null // Calculated monthly target (decimal)
-  created_at: string
-}
-
-export interface BudgetItem {
-  id: string // uuid
-  user_id: string
-  category_id: string // uuid
-  name: string // e.g., "Netflix Subscription", "Emergency Fund"
-  amount: string // Full amount (decimal 12,2) e.g., "1200.00" for annual
-  frequency: BudgetFrequency // monthly, quarterly, semi_annual, annual
-  monthly_impact: string // Normalized to monthly (decimal 12,2) e.g., "100.00" for $1200/year
-  saved_balance: string // User-entered progress toward goal (decimal 12,2)
+  name: string | null
+  icon: string | null
+  color: string | null
+  type: ZBBCategoryType // FIX, VARIABLE, SF1, SF2, INCOME
+  rollover_strategy: RolloverStrategy
+  target_amount: string | null // numeric
+  due_date: string | null // date
+  sweep_target_category_id: string | null // uuid - where positive balance goes on SWEEP
+  sort_order: number | null
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -57,12 +50,53 @@ export interface BudgetItem {
 export interface Transaction {
   id: string // uuid
   user_id: string
-  account_id: string // uuid
   category_id: string | null // uuid (nullable)
-  amount: string // decimal(12,2) - stored as string to avoid float precision issues
-  date: string // timestamp with time zone
-  note: string | null
+  amount: string // numeric - stored as string to avoid float precision issues
+  date: string // date
+  memo: string | null // note field
+  is_starting_balance: boolean
+  is_sweep_transaction: boolean
   created_at: string
+  updated_at: string
+}
+
+/**
+ * MonthlyBudget - ZBB BudgetMonth entity
+ * Represents a category's budget for a specific month
+ */
+export interface MonthlyBudget {
+  id: string // uuid
+  user_id: string
+  category_id: string // uuid
+  month_iso: string // YYYY-MM format
+  assigned_amount: string // numeric
+  start_balance: string // numeric
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * MonthlyBudgetWithActivity - Computed view for UI
+ * Includes calculated activity and available balance
+ */
+export interface MonthlyBudgetWithActivity extends MonthlyBudget {
+  activity: string // Sum of transactions in this month (decimal, usually negative)
+  available: string // start_balance + assigned_amount + activity (decimal)
+  category: Category
+}
+
+/**
+ * BudgetSummary - Summary for budget header
+ */
+export interface BudgetSummary {
+  month: string // YYYY-MM
+  toBeBudgeted: string // Income + Leftover from RESET - Assigned
+  totalIncome: string // Sum of all income transactions
+  leftoverFromReset: string // Leftover from previous month's RESET categories
+  totalAssigned: string // Sum of all assigned amounts
+  totalActivity: string // Sum of all transaction amounts
+  totalAvailable: string // Sum of all available balances
+  overspent: string // Sum of negative available balances (categories in the red)
 }
 
 // ============================================
@@ -71,87 +105,55 @@ export interface Transaction {
 
 // Transaction insert schema for form validation
 export const insertTransactionSchema = z.object({
-  account_id: z.string().uuid('Please select a valid account'),
   category_id: z.string().optional(),
   amount: z
     .string()
     .min(1, 'Amount is required')
     .refine(
       (val) => {
-        // Remove +/- prefix and parse
-        const cleanVal = val.replace(/^[+-]/, '')
+        // Normalize: remove +/- prefix and convert comma to period
+        const cleanVal = val.replace(/^[+-]/, '').replace(',', '.')
         const num = parseFloat(cleanVal)
         return !isNaN(num) && num > 0
       },
       { message: 'Amount must be a positive number' }
     )
     .transform((val) => {
-      // Remove +/- prefix, ensure exactly 2 decimal places
-      const cleanVal = val.replace(/^[+-]/, '')
+      // Normalize: remove +/- prefix and convert comma to period
+      const cleanVal = val.replace(/^[+-]/, '').replace(',', '.')
       const num = parseFloat(cleanVal)
       return num.toFixed(2)
     }),
   date: z.string().optional(),
-  note: z.string().optional(),
+  memo: z.string().optional(),
 })
 
 export type InsertTransactionInput = z.infer<typeof insertTransactionSchema>
-
-// Account insert schema
-export const insertAccountSchema = z.object({
-  name: z.string().min(1, 'Account name is required').max(100),
-  type: z.enum(['cash', 'bank', 'credit', 'savings']),
-  initial_balance: z
-    .string()
-    .optional()
-    .default('0.00')
-    .refine(
-      (val) => {
-        const num = parseFloat(val)
-        return !isNaN(num)
-      },
-      { message: 'Initial balance must be a valid number' }
-    )
-    .transform((val) => {
-      const num = parseFloat(val)
-      return num.toFixed(2)
-    }),
-})
-
-export type InsertAccountInput = z.infer<typeof insertAccountSchema>
 
 // Category insert schema
 export const insertCategorySchema = z.object({
   name: z.string().min(1, 'Category name is required').max(100),
   icon: z.string().optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Color must be a valid hex code').optional(),
-  type: z.enum(['income', 'expense']),
-  budget_type: z.enum(['variable', 'fixed', 'sinking_fund']).default('variable'),
+  type: z.enum(['FIX', 'VARIABLE', 'SF1', 'SF2', 'INCOME']),
+  rollover_strategy: z.enum(['ACCUMULATE', 'RESET', 'SWEEP']).optional(),
   target_amount: z.string().optional().nullable(),
-  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']).default('monthly'),
+  due_date: z.string().optional().nullable(),
 })
 
 export type InsertCategoryInput = z.infer<typeof insertCategorySchema>
 
-// Budget Item insert schema
-export const insertBudgetItemSchema = z.object({
+// Monthly Budget insert schema
+export const insertMonthlyBudgetSchema = z.object({
   category_id: z.string().uuid('Invalid category'),
-  name: z.string().min(1, 'Item name is required').max(100),
-  amount: z
+  month_iso: z.string().regex(/^\d{4}-\d{2}$/, 'Month must be YYYY-MM format'),
+  assigned_amount: z
     .string()
-    .refine(
-      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-      'Amount must be positive'
-    )
+    .refine((val) => !isNaN(parseFloat(val)), 'Assigned must be a number')
     .transform((val) => parseFloat(val).toFixed(2)),
-  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']),
-  saved_balance: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseFloat(val).toFixed(2) : '0.00')),
 })
 
-export type InsertBudgetItemInput = z.infer<typeof insertBudgetItemSchema>
+export type InsertMonthlyBudgetInput = z.infer<typeof insertMonthlyBudgetSchema>
 
 // ============================================
 // API RESPONSE TYPES
@@ -166,45 +168,41 @@ export type ApiResponse<T = void> =
 // ============================================
 
 export interface MonthlyStatistics {
-  income: string // Decimal string
-  expenses: string // Decimal string
-  balance: string // Decimal string
+  income: string
+  expenses: string
+  balance: string
 }
 
 // ============================================
 // DASHBOARD TYPES
 // ============================================
 
-// Bill item for Bills Checklist (monthly budget items)
+// Bill item for Bills Checklist (FIX categories with target_amount)
 export interface BillItem {
-  id: string // budget_item.id
+  id: string // category.id
   name: string
-  category_id: string
-  category_name: string | null
-  category_icon: string
-  category_color: string
-  monthly_impact: string
+  icon: string
+  color: string
+  target_amount: string
   is_paid: boolean // computed: has transaction this month
 }
 
-// Sinking fund item for Progress view (non-monthly budget items)
+// Sinking fund item for Progress view (SF1/SF2 categories)
 export interface SinkingFundItem {
-  id: string // budget_item.id
+  id: string // category.id
   name: string
-  category_id: string
-  category_name: string | null
-  category_icon: string
-  category_color: string
-  amount: string // target amount
-  monthly_impact: string
-  saved_balance: string
+  icon: string
+  color: string
+  target_amount: string // target amount
+  due_date: string | null
+  saved_balance: string // calculated from monthly_budgets
   progress_percentage: number
 }
 
 // Safe to Spend data with breakdown
 export interface SafeToSpendData {
   safeToSpend: string
-  totalLiquid: string
-  pendingBills: string
-  sinkingContributions: string
+  totalIncome: string
+  totalAssigned: string
+  availableToAssign: string
 }

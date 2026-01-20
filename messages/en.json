@@ -3,6 +3,9 @@
     "name": "Budget Zen",
     "tagline": "Minimalist, keyboard-first expense tracker"
   },
+  "common": {
+    "unexpectedError": "An unexpected error occurred"
+  },
   "auth": {
     "signIn": "Sign In",
     "signOut": "Sign Out",
@@ -33,6 +36,8 @@
     "category": "Category",
     "date": "Date",
     "note": "Note",
+    "memo": "Memo",
+    "memoPlaceholder": "Optional memo",
     "optional": "optional",
     "required": "required",
     "save": "Save",
@@ -43,6 +48,7 @@
     "notePlaceholder": "Optional note",
     "selectAccount": "Select account",
     "selectCategory": "Select {type} category",
+    "selectCategoryShort": "Select category (optional)",
     "dialogDescription": "Press Enter to save and close. Press Cmd+Enter (or Ctrl+Enter) to save and add another.",
     "press": "Press",
     "toSaveAndClose": "to save and close.",
@@ -51,6 +57,11 @@
     "income": "Income",
     "expense": "Expense",
     "uncategorized": "Uncategorized",
+    "FIX": "Fixed",
+    "VARIABLE": "Variable",
+    "SF1": "Sinking Fund",
+    "SF2": "Savings Goal",
+    "INCOME": "Income",
     "formatExample": "Format example",
     "editTransaction": "Edit Transaction",
     "editDescription": "Update transaction details",
@@ -115,7 +126,10 @@
       "incomeCategories": "Income Categories",
       "expenseCategories": "Expense Categories",
       "noIncome": "No income categories yet. Create one to get started.",
-      "noExpense": "No expense categories yet. Create one to get started."
+      "noExpense": "No expense categories yet. Create one to get started.",
+      "createSuccess": "Category created successfully",
+      "updateSuccess": "Category updated successfully",
+      "deleteSuccess": "Category deleted successfully"
     },
     "accounts": {
       "title": "Accounts",
@@ -151,12 +165,16 @@
   "budget": {
     "title": "Budget",
     "safeToSpend": "Safe to Spend",
+    "availableToAssign": "Available to Assign",
     "totalCash": "Total Cash",
     "totalLiquid": "Total Liquid Cash",
     "monthlyCommitted": "Monthly Committed",
     "pendingBills": "Pending Bills",
     "sinkingContributions": "Sinking Contributions",
-    "breakdown": "Breakdown",
+    "breakdown": "Overview",
+    "income": "Income",
+    "assigned": "Assigned",
+    "saved": "saved",
     "budgetType": "Budget Type",
     "targetAmount": "Target Amount",
     "frequency": "Frequency",
@@ -168,10 +186,26 @@
     "due": "Due",
     "pending": "pending",
     "noBills": "No monthly bills configured",
+    "undoPaymentHint": "To undo payment, delete the transaction from the list below",
     "noSinkingFunds": "No sinking funds configured",
     "monthsRemaining": "months remaining",
     "markPaid": "Mark as Paid",
     "progress": "Progress",
+    "today": "Today",
+    "toBeBudgeted": "To Be Budgeted",
+    "totalIncome": "Income",
+    "leftoverFromReset": "Leftover",
+    "totalAssigned": "Assigned",
+    "totalActivity": "Activity",
+    "overspent": "Overspent",
+    "overBudgetedWarning": "You've assigned more than you have!",
+    "assigned": "Assigned",
+    "activity": "Activity",
+    "available": "Available",
+    "startBalance": "Carryover",
+    "assign": "Budget",
+    "quickAssign": "Quick Assign",
+    "initializeMonth": "Initialize Month",
     "types": {
       "variable": "Variable (No Budget)",
       "fixed": "Fixed Recurring",
@@ -187,7 +221,47 @@
       "variable": "No budget tracking for this category",
       "fixed": "Regular recurring expense (e.g., rent, subscriptions)",
       "sinking_fund": "Savings goal for future expense (e.g., vacation, car)"
-    }
+    },
+    "zbbTypes": {
+      "FIX": "Fixed",
+      "VARIABLE": "Variable",
+      "SF1": "Sinking Fund (Priority)",
+      "SF2": "Savings Goal",
+      "INCOME": "Income"
+    },
+    "types": {
+      "FIX": "Fixed",
+      "VARIABLE": "Variable",
+      "SF1": "Sinking Fund (Priority)",
+      "SF2": "Savings Goal",
+      "INCOME": "Income"
+    },
+    "rolloverStrategy": "Rollover Strategy",
+    "rolloverStrategies": {
+      "ACCUMULATE": "Accumulate",
+      "RESET": "Reset",
+      "SWEEP": "Sweep"
+    },
+    "strategies": {
+      "ACCUMULATE": "Accumulate",
+      "RESET": "Reset",
+      "SWEEP": "Sweep"
+    },
+    "rolloverDescriptions": {
+      "ACCUMULATE": "Carry over full balance to next month",
+      "RESET": "Start fresh each month",
+      "SWEEP": "Only carry over overspending"
+    },
+    "typeDescriptions": {
+      "INCOME": "Money coming in (salary, freelance, gifts)",
+      "FIX": "Regular bills with fixed amounts (rent, insurance, subscriptions)",
+      "VARIABLE": "Flexible spending that varies month to month (groceries, entertainment)",
+      "SF1": "Save monthly for a known future expense with a deadline (car insurance, vacation)",
+      "SF2": "Long-term savings goal without a fixed deadline (emergency fund, new laptop)"
+    },
+    "dueDate": "Due Date",
+    "autoFillSuccess": "Amount auto-filled",
+    "autoFillHint": "Suggested: {amount}"
   },
   "budgetItems": {
     "title": "Budget Items",

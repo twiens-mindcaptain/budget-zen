@@ -34,30 +34,24 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
       </div>
 
       {/* Icon Grid */}
-      <ScrollArea className="h-[280px] w-full rounded-lg border border-zinc-200 p-3">
-        <div className="grid grid-cols-6 gap-2">
+      <ScrollArea className="h-[200px] w-full rounded-lg border border-zinc-200">
+        <div className="flex flex-wrap gap-1 p-2">
           {COMMON_ICONS.map((iconName) => {
             const IconComponent = getIconComponent(iconName)
             const isSelected = selectedIcon === iconName
 
             return (
-              <Button
+              <button
                 key={iconName}
                 type="button"
-                variant="ghost"
-                className={`h-12 w-full p-0 relative hover:bg-zinc-100 ${
-                  isSelected ? 'bg-zinc-100 ring-2 ring-zinc-900' : ''
+                className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors hover:bg-zinc-100 ${
+                  isSelected ? 'bg-emerald-100 ring-2 ring-emerald-500' : ''
                 }`}
                 onClick={() => handleIconSelect(iconName)}
                 title={iconName}
               >
-                <IconComponent className="w-5 h-5 text-zinc-700" />
-                {isSelected && (
-                  <div className="absolute top-0.5 right-0.5">
-                    <Check className="w-3 h-3 text-zinc-900" />
-                  </div>
-                )}
-              </Button>
+                <IconComponent className={`w-5 h-5 ${isSelected ? 'text-emerald-700' : 'text-zinc-700'}`} />
+              </button>
             )
           })}
         </div>

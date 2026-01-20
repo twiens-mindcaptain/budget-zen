@@ -3,20 +3,25 @@ import { getTranslations, getLocale } from 'next-intl/server'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
 import {
   getRecentTransactions,
-  getAccounts,
   getCategories,
   getMonthlyStatistics,
-  getSafeToSpend,
   getBillsChecklist,
   getSinkingFunds,
 } from '@/app/actions/transaction'
+import { getMonthlyBudgets, getBudgetSummary, getAllSuggestedAmounts } from '@/app/actions/budgets'
 import { seedUserDefaults, getUserProfile } from '@/app/actions/seed'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
+import { startOfMonth, parse } from 'date-fns'
 
-export default async function DashboardPage() {
+interface PageProps {
+  searchParams: Promise<{ month?: string }>
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
   const t = await getTranslations()
+  const params = await searchParams
 
   return (
     <>
@@ -40,37 +45,56 @@ export default async function DashboardPage() {
       </SignedOut>
 
       <SignedIn>
-        <Dashboard />
+        <Dashboard monthParam={params.month} />
       </SignedIn>
     </>
   )
 }
 
-async function Dashboard() {
+interface DashboardProps {
+  monthParam?: string
+}
+
+async function Dashboard({ monthParam }: DashboardProps) {
   const t = await getTranslations()
   const locale = await getLocale()
 
-  // Seed default accounts and categories for new users
+  // Parse month from URL parameter or default to current month
+  let currentMonth: Date
+  if (monthParam) {
+    try {
+      // Parse YYYY-MM format
+      currentMonth = parse(monthParam + '-01', 'yyyy-MM-dd', new Date())
+    } catch {
+      currentMonth = startOfMonth(new Date())
+    }
+  } else {
+    currentMonth = startOfMonth(new Date())
+  }
+
+  // Seed default categories for new users
   await seedUserDefaults()
 
-  // Fetch data server-side
+  // Fetch data server-side for the selected month
   const [
     transactions,
-    accounts,
     categories,
     statistics,
-    safeToSpendData,
     bills,
     sinkingFunds,
+    monthlyBudgets,
+    budgetSummary,
+    suggestedAmounts,
     profile,
   ] = await Promise.all([
-    getRecentTransactions(50),
-    getAccounts(),
+    getRecentTransactions(50, currentMonth),
     getCategories(),
-    getMonthlyStatistics(),
-    getSafeToSpend(),
-    getBillsChecklist(),
+    getMonthlyStatistics(currentMonth),
+    getBillsChecklist(currentMonth),
     getSinkingFunds(),
+    getMonthlyBudgets(currentMonth),
+    getBudgetSummary(currentMonth),
+    getAllSuggestedAmounts(currentMonth),
     getUserProfile(),
   ])
 
@@ -101,13 +125,15 @@ async function Dashboard() {
         <DashboardContent
           initialTransactions={transactions}
           initialStatistics={statistics}
-          initialSafeToSpend={safeToSpendData}
           initialBills={bills}
           initialSinkingFunds={sinkingFunds}
-          accounts={accounts}
+          initialBudgets={monthlyBudgets}
+          initialBudgetSummary={budgetSummary}
+          suggestedAmounts={suggestedAmounts}
           categories={categories}
           currency={profile.currency}
           locale={fullLocale}
+          currentMonth={currentMonth.toISOString()}
         />
       </main>
     </div>

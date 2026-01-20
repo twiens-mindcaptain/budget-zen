@@ -41,13 +41,13 @@ export function DeleteCategoryDialog({
       const result = await deleteCategory(category.id)
 
       if (result.success) {
-        toast.success(result.message)
+        toast.success(t('settings.categories.deleteSuccess'))
         onSuccess(category.id)
       } else {
         toast.error(result.error)
       }
     } catch (error) {
-      toast.error('An unexpected error occurred')
+      toast.error(t('common.unexpectedError'))
       console.error('Delete error:', error)
     } finally {
       setIsDeleting(false)

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createCategory, updateCategory, CategoryFormData } from '@/app/actions/categories'
-import type { Category } from '@/lib/types'
+import type { Category, ZBBCategoryType, RolloverStrategy } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -25,7 +26,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -35,7 +35,6 @@ import {
 } from '@/components/ui/select'
 import { IconPicker } from '@/components/settings/icon-picker'
 import { ColorPicker } from '@/components/settings/color-picker'
-import { getCategoryDisplayName } from '@/lib/i18n-helpers'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -43,10 +42,10 @@ const formSchema = z.object({
   name: z.string().min(1, 'Category name is required').max(50, 'Name too long'),
   icon: z.string().min(1, 'Icon is required'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color'),
-  type: z.enum(['income', 'expense']),
-  budget_type: z.enum(['variable', 'fixed', 'sinking_fund']),
+  type: z.enum(['FIX', 'VARIABLE', 'SF1', 'SF2', 'INCOME']),
+  rollover_strategy: z.enum(['ACCUMULATE', 'RESET', 'SWEEP']),
   target_amount: z.string().optional(),
-  frequency: z.enum(['monthly', 'quarterly', 'semi_annual', 'annual']),
+  due_date: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -71,67 +70,77 @@ export function CategoryDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: category ? getCategoryDisplayName(category, t) : '',
+      name: category?.name || '',
       icon: category?.icon || 'ShoppingCart',
       color: category?.color || '#10b981',
-      type: category?.type || 'expense',
-      budget_type: (category?.budget_type as 'variable' | 'fixed' | 'sinking_fund') || 'variable',
+      type: (category?.type as ZBBCategoryType) || 'VARIABLE',
+      rollover_strategy: (category?.rollover_strategy as RolloverStrategy) || 'RESET',
       target_amount: category?.target_amount || '',
-      frequency: (category?.frequency as 'monthly' | 'quarterly' | 'semi_annual' | 'annual') || 'monthly',
+      due_date: category?.due_date || '',
     },
   })
 
-  // Watch budget_type to conditionally show/hide fields
-  const budgetType = form.watch('budget_type')
-  const showBudgetFields = budgetType === 'fixed' || budgetType === 'sinking_fund'
+  // Watch type to conditionally show/hide fields
+  const categoryType = form.watch('type')
+  const showTargetAmount = categoryType === 'FIX' || categoryType === 'SF1' || categoryType === 'SF2'
+  const showDueDate = categoryType === 'SF1'
 
   // Reset form when category changes
   useEffect(() => {
     if (category) {
       form.reset({
-        name: getCategoryDisplayName(category, t),
+        name: category.name || '',
         icon: category.icon || 'ShoppingCart',
         color: category.color || '#10b981',
-        type: category.type,
-        budget_type: (category.budget_type as 'variable' | 'fixed' | 'sinking_fund') || 'variable',
+        type: (category.type as ZBBCategoryType) || 'VARIABLE',
+        rollover_strategy: (category.rollover_strategy as RolloverStrategy) || 'RESET',
         target_amount: category.target_amount || '',
-        frequency: (category.frequency as 'monthly' | 'quarterly' | 'semi_annual' | 'annual') || 'monthly',
+        due_date: category.due_date || '',
       })
     } else {
       form.reset({
         name: '',
         icon: 'ShoppingCart',
         color: '#10b981',
-        type: 'expense',
-        budget_type: 'variable',
+        type: 'VARIABLE',
+        rollover_strategy: 'RESET',
         target_amount: '',
-        frequency: 'monthly',
+        due_date: '',
       })
     }
-  }, [category, form, t])
+  }, [category, form])
 
   async function onSubmit(data: FormData) {
     setIsSubmitting(true)
 
     try {
+      const formData: CategoryFormData = {
+        name: data.name,
+        icon: data.icon,
+        color: data.color,
+        type: data.type,
+        rollover_strategy: data.rollover_strategy,
+        target_amount: data.target_amount || null,
+        due_date: data.due_date || null,
+      }
+
       const result = isEditing
-        ? await updateCategory(category.id, data as CategoryFormData)
-        : await createCategory(data as CategoryFormData)
+        ? await updateCategory(category.id, formData)
+        : await createCategory(formData)
 
       if (result.success) {
         toast.success(
           isEditing
-            ? 'Category updated successfully'
-            : 'Category created successfully'
+            ? t('settings.categories.updateSuccess')
+            : t('settings.categories.createSuccess')
         )
-        // Call onSuccess with the full category object from server
         onSuccess(result.data)
         form.reset()
       } else {
         toast.error(result.error)
       }
     } catch (error) {
-      toast.error('An unexpected error occurred')
+      toast.error(t('common.unexpectedError'))
       console.error('Form submission error:', error)
     } finally {
       setIsSubmitting(false)
@@ -140,7 +149,7 @@ export function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing
@@ -175,39 +184,57 @@ export function CategoryDialog({
               )}
             />
 
-            {/* Category Type */}
+            {/* Category Type (ZBB) */}
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t('settings.categories.type')}</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="expense" id="expense" />
-                        <label
-                          htmlFor="expense"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {t('transaction.expense')}
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="income" id="income" />
-                        <label
-                          htmlFor="income"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {t('transaction.income')}
-                        </label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('settings.categories.type')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="INCOME">{t('budget.types.INCOME')}</SelectItem>
+                      <SelectItem value="FIX">{t('budget.types.FIX')}</SelectItem>
+                      <SelectItem value="VARIABLE">{t('budget.types.VARIABLE')}</SelectItem>
+                      <SelectItem value="SF1">{t('budget.types.SF1')}</SelectItem>
+                      <SelectItem value="SF2">{t('budget.types.SF2')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {t(`budget.typeDescriptions.${field.value}`)}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Rollover Strategy */}
+            <FormField
+              control={form.control}
+              name="rollover_strategy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('budget.rolloverStrategy')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('budget.rolloverStrategy')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="RESET">{t('budget.strategies.RESET')}</SelectItem>
+                      <SelectItem value="ACCUMULATE">{t('budget.strategies.ACCUMULATE')}</SelectItem>
+                      <SelectItem value="SWEEP">{t('budget.strategies.SWEEP')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {t(`budget.rolloverDescriptions.${field.value}`)}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -243,41 +270,8 @@ export function CategoryDialog({
               )}
             />
 
-            {/* Budget Type */}
-            <FormField
-              control={form.control}
-              name="budget_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('budget.budgetType')}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('budget.budgetType')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="variable">
-                        {t('budget.types.variable')}
-                      </SelectItem>
-                      <SelectItem value="fixed">
-                        {t('budget.types.fixed')}
-                      </SelectItem>
-                      <SelectItem value="sinking_fund">
-                        {t('budget.types.sinking_fund')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    {t(`budget.descriptions.${field.value}`)}
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* Target Amount (conditional) */}
-            {showBudgetFields && (
+            {showTargetAmount && (
               <FormField
                 control={form.control}
                 name="target_amount"
@@ -298,35 +292,20 @@ export function CategoryDialog({
               />
             )}
 
-            {/* Frequency (conditional) */}
-            {showBudgetFields && (
+            {/* Due Date (conditional - only for SF1) */}
+            {showDueDate && (
               <FormField
                 control={form.control}
-                name="frequency"
+                name="due_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('budget.frequency')}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('budget.frequency')} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="monthly">
-                          {t('budget.frequencies.monthly')}
-                        </SelectItem>
-                        <SelectItem value="quarterly">
-                          {t('budget.frequencies.quarterly')}
-                        </SelectItem>
-                        <SelectItem value="semi_annual">
-                          {t('budget.frequencies.semi_annual')}
-                        </SelectItem>
-                        <SelectItem value="annual">
-                          {t('budget.frequencies.annual')}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>{t('budget.dueDate')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="date"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

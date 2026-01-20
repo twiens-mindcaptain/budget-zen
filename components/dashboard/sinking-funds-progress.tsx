@@ -20,8 +20,8 @@ export function SinkingFundsProgress({
 }: SinkingFundsProgressProps) {
   const t = useTranslations()
 
-  const totalMonthlyContribution = funds.reduce(
-    (sum, fund) => sum + parseFloat(fund.monthly_impact),
+  const totalSaved = funds.reduce(
+    (sum, fund) => sum + parseFloat(fund.saved_balance),
     0
   )
 
@@ -34,7 +34,7 @@ export function SinkingFundsProgress({
             {t('budget.sinkingFundsProgress')}
           </CardTitle>
           <div className="text-sm text-zinc-500">
-            {formatCurrency(totalMonthlyContribution, currency, '', locale)}/mo
+            {formatCurrency(totalSaved, currency, '', locale)} {t('budget.saved')}
           </div>
         </div>
       </CardHeader>
@@ -45,9 +45,9 @@ export function SinkingFundsProgress({
           </div>
         ) : (
           funds.map((fund) => {
-            const CategoryIcon = getCategoryIcon(fund.category_icon)
+            const CategoryIcon = getCategoryIcon(fund.icon)
             const saved = parseFloat(fund.saved_balance)
-            const target = parseFloat(fund.amount)
+            const target = parseFloat(fund.target_amount)
             const progress = fund.progress_percentage
 
             return (
@@ -55,11 +55,11 @@ export function SinkingFundsProgress({
                 <div className="flex items-center gap-3">
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${fund.category_color}15` }}
+                    style={{ backgroundColor: `${fund.color}15` }}
                   >
                     <CategoryIcon
                       className="w-4 h-4"
-                      style={{ color: fund.category_color }}
+                      style={{ color: fund.color }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -81,7 +81,7 @@ export function SinkingFundsProgress({
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${progress}%`,
-                      backgroundColor: fund.category_color,
+                      backgroundColor: fund.color,
                     }}
                   />
                 </div>
