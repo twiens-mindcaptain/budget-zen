@@ -37,6 +37,7 @@ import { IconPicker } from '@/components/settings/icon-picker'
 import { ColorPicker } from '@/components/settings/color-picker'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getCategorySuggestion } from '@/lib/category-suggestions'
 
 const formSchema = z.object({
   name: z.string().min(1, 'Category name is required').max(50, 'Name too long'),
@@ -84,6 +85,18 @@ export function CategoryDialog({
   const categoryType = form.watch('type')
   const showTargetAmount = categoryType === 'FIX' || categoryType === 'SF1' || categoryType === 'SF2'
   const showDueDate = categoryType === 'SF1'
+
+  // Watch name for smart suggestions (only when creating)
+  const categoryName = form.watch('name')
+
+  // Auto-suggest icon and color based on name (only when creating new category)
+  useEffect(() => {
+    if (isEditing || !categoryName.trim()) return
+
+    const suggestion = getCategorySuggestion(categoryName, categoryType)
+    form.setValue('icon', suggestion.icon)
+    form.setValue('color', suggestion.color)
+  }, [categoryName, categoryType, isEditing, form])
 
   // Reset form when category changes
   useEffect(() => {
