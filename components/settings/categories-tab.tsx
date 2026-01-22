@@ -1,14 +1,64 @@
 'use client'
 
-import { useState, useOptimistic } from 'react'
+import { useState, useOptimistic, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Banknote,
+  Receipt,
+  ShoppingCart,
+  PiggyBank,
+  Target,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { CategoryDialog } from '@/components/settings/category-dialog'
 import { DeleteCategoryDialog } from '@/components/settings/delete-category-dialog'
 import { getCategoryIcon } from '@/lib/icon-mapper'
 import { getCategoryDisplayName } from '@/lib/i18n-helpers'
 import type { Category } from '@/lib/types'
+
+// ZBB type configuration with icons and colors
+const ZBB_TYPE_CONFIG = {
+  INCOME: {
+    icon: Banknote,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+  },
+  FIX: {
+    icon: Receipt,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+  },
+  VARIABLE: {
+    icon: ShoppingCart,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+  },
+  SF1: {
+    icon: PiggyBank,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+  },
+  SF2: {
+    icon: Target,
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
+    borderColor: 'border-pink-200',
+  },
+} as const
+
+// Order for displaying types
+const TYPE_ORDER: Array<keyof typeof ZBB_TYPE_CONFIG> = ['INCOME', 'FIX', 'VARIABLE', 'SF1', 'SF2']
 
 interface CategoriesTabProps {
   initialCategories: Category[]
@@ -20,6 +70,8 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
 
   type CategoryAction =
     | { type: 'create'; category: Category }
@@ -40,9 +92,54 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
     }
   )
 
-  // Separate categories by type (ZBB types)
-  const incomeCategories = optimisticCategories.filter((c) => c.type === 'INCOME')
-  const expenseCategories = optimisticCategories.filter((c) => c.type !== 'INCOME')
+  // Filter categories by search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return optimisticCategories
+
+    const query = searchQuery.toLowerCase()
+    return optimisticCategories.filter((category) => {
+      const displayName = getCategoryDisplayName(category, t).toLowerCase()
+      return displayName.includes(query)
+    })
+  }, [optimisticCategories, searchQuery, t])
+
+  // Group categories by ZBB type
+  const categoriesByType = useMemo(() => {
+    const groups: Record<string, Category[]> = {}
+    TYPE_ORDER.forEach((type) => {
+      groups[type] = []
+    })
+
+    filteredCategories.forEach((category) => {
+      const type = category.type || 'VARIABLE'
+      if (groups[type]) {
+        groups[type].push(category)
+      } else {
+        groups['VARIABLE'].push(category) // Fallback
+      }
+    })
+
+    // Sort each group alphabetically
+    Object.keys(groups).forEach((type) => {
+      groups[type].sort((a, b) =>
+        getCategoryDisplayName(a, t).localeCompare(getCategoryDisplayName(b, t))
+      )
+    })
+
+    return groups
+  }, [filteredCategories, t])
+
+  const toggleSection = (type: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) {
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
+      return next
+    })
+  }
 
   const handleEditClick = (category: Category) => {
     setSelectedCategory(category)
@@ -71,67 +168,110 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
     setSelectedCategory(null)
   }
 
-  const renderCategoryCard = (category: Category) => {
+  const renderCategoryRow = (category: Category) => {
     const CategoryIcon = getCategoryIcon(category.icon || 'HelpCircle')
     const categoryColor = category.color || '#71717a'
 
     return (
       <div
         key={category.id}
-        className="bg-white rounded-xl border border-zinc-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+        className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-zinc-50 transition-colors group"
       >
-        <div className="flex items-center gap-3">
-          {/* Icon */}
-          <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: `${categoryColor}15`,
-            }}
+        {/* Icon */}
+        <div
+          className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{
+            backgroundColor: `${categoryColor}15`,
+          }}
+        >
+          <CategoryIcon className="w-4 h-4" style={{ color: categoryColor }} />
+        </div>
+
+        {/* Category Name */}
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-medium text-zinc-900 truncate block">
+            {getCategoryDisplayName(category, t)}
+          </span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditClick(category)}
+            className="h-7 w-7 p-0"
           >
-            <CategoryIcon
-              className="w-6 h-6"
-              style={{ color: categoryColor }}
-            />
-          </div>
-
-          {/* Category Info */}
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-zinc-900">
-              {getCategoryDisplayName(category, t)}
-            </div>
-            <div className="text-xs text-zinc-500 capitalize">
-              {t(`transaction.${category.type}`)}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEditClick(category)}
-              className="h-8 w-8 p-0"
-            >
-              <Pencil className="w-4 h-4" />
-              <span className="sr-only">Edit</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteClick(category)}
-              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </div>
+            <Pencil className="w-3.5 h-3.5" />
+            <span className="sr-only">Edit</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteClick(category)}
+            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="sr-only">Delete</span>
+          </Button>
         </div>
       </div>
     )
   }
 
+  const renderTypeSection = (type: keyof typeof ZBB_TYPE_CONFIG) => {
+    const categories = categoriesByType[type] || []
+    const config = ZBB_TYPE_CONFIG[type]
+    const TypeIcon = config.icon
+    const isCollapsed = collapsedSections.has(type)
+
+    // Don't render empty sections when searching
+    if (categories.length === 0 && searchQuery.trim()) {
+      return null
+    }
+
+    return (
+      <div key={type} className={`rounded-xl border ${config.borderColor} overflow-hidden`}>
+        {/* Section Header */}
+        <button
+          onClick={() => toggleSection(type)}
+          className={`w-full flex items-center gap-3 px-4 py-3 ${config.bgColor} hover:brightness-95 transition-all`}
+        >
+          <div className="flex items-center gap-2 flex-1">
+            {isCollapsed ? (
+              <ChevronRight className={`w-4 h-4 ${config.color}`} />
+            ) : (
+              <ChevronDown className={`w-4 h-4 ${config.color}`} />
+            )}
+            <TypeIcon className={`w-5 h-5 ${config.color}`} />
+            <span className={`font-medium ${config.color}`}>
+              {t(`settings.categories.types.${type}`)}
+            </span>
+          </div>
+          <span className="text-sm text-zinc-500 tabular-nums">{categories.length}</span>
+        </button>
+
+        {/* Section Content */}
+        {!isCollapsed && (
+          <div className="bg-white p-2">
+            {categories.length === 0 ? (
+              <div className="text-center py-4 text-zinc-400 text-sm">
+                {t('settings.categories.noCategories')}
+              </div>
+            ) : (
+              <div className="space-y-0.5">{categories.map(renderCategoryRow)}</div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const totalCategories = optimisticCategories.length
+  const filteredCount = filteredCategories.length
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -148,34 +288,26 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
         </Button>
       </div>
 
-      {/* Income Categories */}
-      <div>
-        <h3 className="text-sm font-medium text-zinc-700 mb-3">
-          {t('settings.categories.incomeCategories')} ({incomeCategories.length})
-        </h3>
-        <div className="grid gap-3 md:grid-cols-2">
-          {incomeCategories.map(renderCategoryCard)}
-          {incomeCategories.length === 0 && (
-            <div className="col-span-2 text-center py-8 text-zinc-500 text-sm">
-              {t('settings.categories.noIncome')}
-            </div>
-          )}
-        </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+        <Input
+          type="text"
+          placeholder={t('settings.categories.searchPlaceholder')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+        {searchQuery && filteredCount !== totalCategories && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
+            {filteredCount} / {totalCategories}
+          </span>
+        )}
       </div>
 
-      {/* Expense Categories */}
-      <div>
-        <h3 className="text-sm font-medium text-zinc-700 mb-3">
-          {t('settings.categories.expenseCategories')} ({expenseCategories.length})
-        </h3>
-        <div className="grid gap-3 md:grid-cols-2">
-          {expenseCategories.map(renderCategoryCard)}
-          {expenseCategories.length === 0 && (
-            <div className="col-span-2 text-center py-8 text-zinc-500 text-sm">
-              {t('settings.categories.noExpense')}
-            </div>
-          )}
-        </div>
+      {/* Category Sections by Type */}
+      <div className="space-y-3">
+        {TYPE_ORDER.map(renderTypeSection)}
       </div>
 
       {/* Create Dialog */}

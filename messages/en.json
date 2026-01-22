@@ -191,6 +191,15 @@
       "expenseCategories": "Expense Categories",
       "noIncome": "No income categories yet. Create one to get started.",
       "noExpense": "No expense categories yet. Create one to get started.",
+      "noCategories": "No categories in this group",
+      "searchPlaceholder": "Search categories...",
+      "types": {
+        "INCOME": "Income",
+        "FIX": "Fixed Expenses",
+        "VARIABLE": "Variable Expenses",
+        "SF1": "Sinking Funds",
+        "SF2": "Savings Goals"
+      },
       "createSuccess": "Category created successfully",
       "updateSuccess": "Category updated successfully",
       "deleteSuccess": "Category deleted successfully"

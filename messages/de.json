@@ -191,6 +191,15 @@
       "expenseCategories": "Ausgabenkategorien",
       "noIncome": "Noch keine Einnahmekategorien. Erstelle eine, um zu beginnen.",
       "noExpense": "Noch keine Ausgabenkategorien. Erstelle eine, um zu beginnen.",
+      "noCategories": "Keine Kategorien in dieser Gruppe",
+      "searchPlaceholder": "Kategorien suchen...",
+      "types": {
+        "INCOME": "Einnahmen",
+        "FIX": "Fixkosten",
+        "VARIABLE": "Variable Ausgaben",
+        "SF1": "Rücklagen",
+        "SF2": "Sparziele"
+      },
       "createSuccess": "Kategorie erfolgreich erstellt",
       "updateSuccess": "Kategorie erfolgreich aktualisiert",
       "deleteSuccess": "Kategorie erfolgreich gelöscht"
