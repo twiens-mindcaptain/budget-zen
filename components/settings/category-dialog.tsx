@@ -86,24 +86,13 @@ export function CategoryDialog({
   const showTargetAmount = categoryType === 'FIX' || categoryType === 'SF1' || categoryType === 'SF2'
   const showDueDate = categoryType === 'SF1'
 
-  // Auto-suggest icon and color based on name (only when creating new category)
-  // Uses subscription to react immediately when user types
-  useEffect(() => {
-    if (isEditing) return
-
-    const subscription = form.watch((value, { name: fieldName }) => {
-      if (fieldName === 'name' || fieldName === 'type') {
-        const nameValue = value.name?.trim()
-        if (nameValue) {
-          const suggestion = getCategorySuggestion(nameValue, value.type as ZBBCategoryType)
-          form.setValue('icon', suggestion.icon)
-          form.setValue('color', suggestion.color)
-        }
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [form, isEditing])
+  // Apply smart suggestions for icon and color based on name
+  const applySuggestions = (name: string) => {
+    if (isEditing || !name.trim()) return
+    const suggestion = getCategorySuggestion(name, categoryType)
+    form.setValue('icon', suggestion.icon)
+    form.setValue('color', suggestion.color)
+  }
 
   // Reset form when category changes
   useEffect(() => {
@@ -197,6 +186,11 @@ export function CategoryDialog({
                       {...field}
                       placeholder={t('settings.categories.namePlaceholder')}
                       autoFocus
+                      className="bg-white"
+                      onChange={(e) => {
+                        field.onChange(e)
+                        applySuggestions(e.target.value)
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -213,7 +207,7 @@ export function CategoryDialog({
                   <FormLabel>{t('settings.categories.type')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white">
                         <SelectValue placeholder={t('settings.categories.type')} />
                       </SelectTrigger>
                     </FormControl>
@@ -242,7 +236,7 @@ export function CategoryDialog({
                   <FormLabel>{t('budget.rolloverStrategy')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white">
                         <SelectValue placeholder={t('budget.rolloverStrategy')} />
                       </SelectTrigger>
                     </FormControl>
@@ -304,6 +298,7 @@ export function CategoryDialog({
                         type="number"
                         step="0.01"
                         placeholder="0.00"
+                        className="bg-white"
                       />
                     </FormControl>
                     <FormMessage />
@@ -324,6 +319,7 @@ export function CategoryDialog({
                       <Input
                         {...field}
                         type="date"
+                        className="bg-white"
                       />
                     </FormControl>
                     <FormMessage />
