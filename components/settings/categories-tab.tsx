@@ -296,7 +296,7 @@ export function CategoriesTab({ initialCategories }: CategoriesTabProps) {
           placeholder={t('settings.categories.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="pl-9 bg-white"
         />
         {searchQuery && filteredCount !== totalCategories && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
