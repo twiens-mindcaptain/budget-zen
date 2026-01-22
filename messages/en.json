@@ -328,7 +328,10 @@
     "autoFillHint": "Suggested: {amount}",
     "sfGoal": "Goal",
     "sfSaved": "Saved",
-    "sfMonthly": "+Month"
+    "sfMonthly": "+Month",
+    "showMore": "+{count} more",
+    "showLess": "Show less",
+    "totalSaved": "Total Saved"
   },
   "budgetItems": {
     "title": "Budget Items",

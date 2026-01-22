@@ -328,7 +328,10 @@
     "autoFillHint": "Vorgeschlagen: {amount}",
     "sfGoal": "Ziel",
     "sfSaved": "Gespart",
-    "sfMonthly": "+Monat"
+    "sfMonthly": "+Monat",
+    "showMore": "+{count} weitere",
+    "showLess": "Weniger anzeigen",
+    "totalSaved": "Gesamt gespart"
   },
   "budgetItems": {
     "title": "Budget-Positionen",
