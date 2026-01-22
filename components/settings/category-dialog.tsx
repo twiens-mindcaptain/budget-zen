@@ -44,10 +44,23 @@ const formSchema = z.object({
   icon: z.string().min(1, 'Icon is required'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color'),
   type: z.enum(['FIX', 'VARIABLE', 'SF1', 'SF2', 'INCOME']),
-  rollover_strategy: z.enum(['ACCUMULATE', 'RESET', 'SWEEP']),
   target_amount: z.string().optional(),
   due_date: z.string().optional(),
 })
+
+// Automatically determine rollover strategy based on category type
+function getRolloverStrategyForType(type: ZBBCategoryType): RolloverStrategy {
+  switch (type) {
+    case 'SF1':
+    case 'SF2':
+      return 'ACCUMULATE' // Sinking funds accumulate over time
+    case 'INCOME':
+    case 'FIX':
+    case 'VARIABLE':
+    default:
+      return 'RESET' // Regular categories reset each month
+  }
+}
 
 type FormData = z.infer<typeof formSchema>
 
@@ -75,7 +88,6 @@ export function CategoryDialog({
       icon: category?.icon || 'ShoppingCart',
       color: category?.color || '#10b981',
       type: (category?.type as ZBBCategoryType) || 'VARIABLE',
-      rollover_strategy: (category?.rollover_strategy as RolloverStrategy) || 'RESET',
       target_amount: category?.target_amount || '',
       due_date: category?.due_date || '',
     },
@@ -102,7 +114,6 @@ export function CategoryDialog({
         icon: category.icon || 'ShoppingCart',
         color: category.color || '#10b981',
         type: (category.type as ZBBCategoryType) || 'VARIABLE',
-        rollover_strategy: (category.rollover_strategy as RolloverStrategy) || 'RESET',
         target_amount: category.target_amount || '',
         due_date: category.due_date || '',
       })
@@ -112,7 +123,6 @@ export function CategoryDialog({
         icon: 'ShoppingCart',
         color: '#10b981',
         type: 'VARIABLE',
-        rollover_strategy: 'RESET',
         target_amount: '',
         due_date: '',
       })
@@ -128,7 +138,7 @@ export function CategoryDialog({
         icon: data.icon,
         color: data.color,
         type: data.type,
-        rollover_strategy: data.rollover_strategy,
+        rollover_strategy: getRolloverStrategyForType(data.type),
         target_amount: data.target_amount || null,
         due_date: data.due_date || null,
       }
@@ -221,33 +231,6 @@ export function CategoryDialog({
                   </Select>
                   <FormDescription>
                     {t(`budget.typeDescriptions.${field.value}`)}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Rollover Strategy */}
-            <FormField
-              control={form.control}
-              name="rollover_strategy"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('budget.rolloverStrategy')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder={t('budget.rolloverStrategy')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="RESET">{t('budget.strategies.RESET')}</SelectItem>
-                      <SelectItem value="ACCUMULATE">{t('budget.strategies.ACCUMULATE')}</SelectItem>
-                      <SelectItem value="SWEEP">{t('budget.strategies.SWEEP')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {t(`budget.rolloverDescriptions.${field.value}`)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
