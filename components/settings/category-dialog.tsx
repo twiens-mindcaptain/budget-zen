@@ -86,17 +86,24 @@ export function CategoryDialog({
   const showTargetAmount = categoryType === 'FIX' || categoryType === 'SF1' || categoryType === 'SF2'
   const showDueDate = categoryType === 'SF1'
 
-  // Watch name for smart suggestions (only when creating)
-  const categoryName = form.watch('name')
-
   // Auto-suggest icon and color based on name (only when creating new category)
+  // Uses subscription to react immediately when user types
   useEffect(() => {
-    if (isEditing || !categoryName.trim()) return
+    if (isEditing) return
 
-    const suggestion = getCategorySuggestion(categoryName, categoryType)
-    form.setValue('icon', suggestion.icon)
-    form.setValue('color', suggestion.color)
-  }, [categoryName, categoryType, isEditing, form])
+    const subscription = form.watch((value, { name: fieldName }) => {
+      if (fieldName === 'name' || fieldName === 'type') {
+        const nameValue = value.name?.trim()
+        if (nameValue) {
+          const suggestion = getCategorySuggestion(nameValue, value.type as ZBBCategoryType)
+          form.setValue('icon', suggestion.icon)
+          form.setValue('color', suggestion.color)
+        }
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [form, isEditing])
 
   // Reset form when category changes
   useEffect(() => {
