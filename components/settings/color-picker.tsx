@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Check } from 'lucide-react'
 
@@ -44,6 +44,11 @@ const COLORS = [
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [selectedColor, setSelectedColor] = useState(value)
+
+  // Sync internal state when value prop changes (e.g., from smart suggestions)
+  useEffect(() => {
+    setSelectedColor(value)
+  }, [value])
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { COMMON_ICONS, getIconComponent } from '@/lib/icon-mapper'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -13,6 +13,11 @@ interface IconPickerProps {
 
 export function IconPicker({ value, onChange }: IconPickerProps) {
   const [selectedIcon, setSelectedIcon] = useState(value)
+
+  // Sync internal state when value prop changes (e.g., from smart suggestions)
+  useEffect(() => {
+    setSelectedIcon(value)
+  }, [value])
 
   const handleIconSelect = (iconName: string) => {
     setSelectedIcon(iconName)
