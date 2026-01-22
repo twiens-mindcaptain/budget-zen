@@ -3,6 +3,65 @@
     "name": "Budget Zen",
     "tagline": "Minimalist, keyboard-first expense tracker"
   },
+  "landing": {
+    "hero": {
+      "headline": "Budget Zen. Master your money in seconds.",
+      "subline": "The premium expense tracker for professionals. Privacy-first. Keyboard-first."
+    },
+    "cta": {
+      "getStarted": "Start 7-Day Free Trial",
+      "signIn": "Sign In"
+    },
+    "features": {
+      "quickAdd": {
+        "title": "Quick Add",
+        "description": "Capture expenses in seconds via keyboard. No clicking around."
+      },
+      "safeToSpend": {
+        "title": "Safe-to-Spend",
+        "description": "Know exactly what you can spend after bills are covered."
+      },
+      "sinkingFunds": {
+        "title": "Sinking Funds",
+        "description": "Handle annual payments without stress. Save monthly, spend yearly."
+      }
+    },
+    "pricing": {
+      "title": "Simple Pricing",
+      "subtitle": "One payment. Lifetime access.",
+      "plan": "Lifetime License",
+      "price": "€29",
+      "priceDetail": "one-time",
+      "features": {
+        "accounts": "Unlimited Accounts",
+        "sinkingFunds": "Unlimited Sinking Funds",
+        "updates": "Lifetime Updates"
+      },
+      "cta": "Get Lifetime Access"
+    },
+    "screenshot": {
+      "alt": "Budget Zen Dashboard Preview"
+    },
+    "footer": {
+      "imprint": "Imprint",
+      "privacy": "Privacy"
+    }
+  },
+  "trial": {
+    "banner": "Trial ends in {days} days.",
+    "bannerLastDay": "Trial ends today!",
+    "getLicense": "Get Lifetime License"
+  },
+  "expired": {
+    "title": "Your trial has ended",
+    "subtitle": "Thank you for trying Budget Zen",
+    "stats": {
+      "tracked": "You tracked {count} transactions",
+      "message": "Don't lose your progress. Unlock lifetime access now."
+    },
+    "cta": "Buy Lifetime Access for €29",
+    "later": "Maybe later"
+  },
   "common": {
     "unexpectedError": "An unexpected error occurred"
   },

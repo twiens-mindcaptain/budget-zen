@@ -22,11 +22,15 @@ export type ZBBCategoryType = 'FIX' | 'VARIABLE' | 'SF1' | 'SF2' | 'INCOME'
  */
 export type RolloverStrategy = 'ACCUMULATE' | 'RESET' | 'SWEEP'
 
+export type SubscriptionStatus = 'trial' | 'active' | 'expired'
+
 export interface Profile {
   user_id: string
   currency: string
   locale: string
   onboarding_completed: boolean
+  trial_ends_at: string | null
+  subscription_status: SubscriptionStatus
   created_at: string
 }
 

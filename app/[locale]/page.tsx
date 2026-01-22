@@ -1,6 +1,9 @@
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
+import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import { getTranslations, getLocale } from 'next-intl/server'
+import { redirect } from 'next/navigation'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
+import { LandingPage } from '@/components/landing-page'
+import { TrialBanner } from '@/components/trial-banner'
 import {
   getRecentTransactions,
   getCategories,
@@ -20,28 +23,13 @@ interface PageProps {
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  const t = await getTranslations()
   const params = await searchParams
+  const locale = await getLocale()
 
   return (
     <>
       <SignedOut>
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100">
-          <div className="absolute top-4 right-4">
-            <LanguageSwitcher />
-          </div>
-          <div className="text-center space-y-6 p-8">
-            <h1 className="text-4xl font-bold text-zinc-900">{t('app.name')}</h1>
-            <p className="text-lg text-zinc-600">
-              {t('app.tagline')}
-            </p>
-            <SignInButton mode="modal">
-              <button className="px-6 py-3 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors">
-                {t('auth.signInToStart')}
-              </button>
-            </SignInButton>
-          </div>
-        </div>
+        <LandingPage locale={locale} />
       </SignedOut>
 
       <SignedIn>
@@ -98,11 +86,30 @@ async function Dashboard({ monthParam }: DashboardProps) {
     getUserProfile(),
   ])
 
+  // Check trial status - redirect to /expired if trial ended and not active
+  const isTrialExpired =
+    profile.subscription_status !== 'active' &&
+    profile.trial_ends_at &&
+    new Date(profile.trial_ends_at) < new Date()
+
+  if (isTrialExpired) {
+    redirect(`/${locale}/expired`)
+  }
+
+  // Check if user is in trial (not active subscription)
+  const showTrialBanner =
+    profile.subscription_status === 'trial' && profile.trial_ends_at
+
   // Convert locale to full locale for number formatting
   const fullLocale = locale === 'de' ? 'de-DE' : 'en-US'
 
   return (
     <div className="min-h-screen bg-zinc-50">
+      {/* Trial Banner */}
+      {showTrialBanner && (
+        <TrialBanner trialEndsAt={profile.trial_ends_at!} locale={locale} />
+      )}
+
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">

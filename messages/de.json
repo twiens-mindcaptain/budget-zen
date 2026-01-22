@@ -3,6 +3,65 @@
     "name": "Budget Zen",
     "tagline": "Minimalistischer, tastaturgesteuerter Ausgabentracker"
   },
+  "landing": {
+    "hero": {
+      "headline": "Budget Zen. Deine Finanzen in Sekunden.",
+      "subline": "Der Premium-Ausgabentracker für Profis. Privatsphäre-first. Tastatur-first."
+    },
+    "cta": {
+      "getStarted": "7 Tage kostenlos testen",
+      "signIn": "Anmelden"
+    },
+    "features": {
+      "quickAdd": {
+        "title": "Schnelleingabe",
+        "description": "Erfasse Ausgaben in Sekunden per Tastatur. Kein Herumklicken."
+      },
+      "safeToSpend": {
+        "title": "Frei verfügbar",
+        "description": "Wisse genau, was du ausgeben kannst, nachdem Rechnungen gedeckt sind."
+      },
+      "sinkingFunds": {
+        "title": "Rücklagen",
+        "description": "Bewältige jährliche Zahlungen stressfrei. Monatlich sparen, jährlich zahlen."
+      }
+    },
+    "pricing": {
+      "title": "Einfache Preise",
+      "subtitle": "Eine Zahlung. Lebenslanger Zugang.",
+      "plan": "Lifetime-Lizenz",
+      "price": "29 €",
+      "priceDetail": "einmalig",
+      "features": {
+        "accounts": "Unbegrenzte Konten",
+        "sinkingFunds": "Unbegrenzte Rücklagen",
+        "updates": "Lebenslange Updates"
+      },
+      "cta": "Lifetime-Zugang sichern"
+    },
+    "screenshot": {
+      "alt": "Budget Zen Dashboard Vorschau"
+    },
+    "footer": {
+      "imprint": "Impressum",
+      "privacy": "Datenschutz"
+    }
+  },
+  "trial": {
+    "banner": "Testphase endet in {days} Tagen.",
+    "bannerLastDay": "Testphase endet heute!",
+    "getLicense": "Lifetime-Lizenz sichern"
+  },
+  "expired": {
+    "title": "Deine Testphase ist beendet",
+    "subtitle": "Danke, dass du Budget Zen ausprobiert hast",
+    "stats": {
+      "tracked": "Du hast {count} Transaktionen erfasst",
+      "message": "Verliere nicht deinen Fortschritt. Sichere dir jetzt lebenslangen Zugang."
+    },
+    "cta": "Lifetime-Zugang für 29 € kaufen",
+    "later": "Vielleicht später"
+  },
   "common": {
     "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten"
   },

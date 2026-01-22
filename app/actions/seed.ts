@@ -30,13 +30,18 @@ export async function seedUserDefaults() {
       .single()
 
     if (!existingProfile) {
-      // Create profile with default values
+      // Create profile with default values and 7-day trial
+      const trialEndsAt = new Date()
+      trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+
       const { error: profileError } = await getServerSupabase()
         .from('profiles')
         .insert({
           user_id: userId,
           currency: 'EUR', // Default currency
           theme_preference: 'system',
+          trial_ends_at: trialEndsAt.toISOString(),
+          subscription_status: 'trial',
         })
 
       if (profileError) {
@@ -182,10 +187,14 @@ export async function getUserProfile() {
     if (error) {
       console.error('Error fetching user profile:', error)
       // Return default profile if fetch fails
+      const trialEndsAt = new Date()
+      trialEndsAt.setDate(trialEndsAt.getDate() + 7)
       return {
         user_id: userId,
         currency: 'EUR',
         theme_preference: 'system',
+        trial_ends_at: trialEndsAt.toISOString(),
+        subscription_status: 'trial' as const,
         created_at: new Date().toISOString(),
       }
     }
