@@ -62,6 +62,13 @@
     "cta": "Buy Lifetime Access for €29",
     "later": "Maybe later"
   },
+  "payment": {
+    "success": {
+      "title": "Payment Successful!",
+      "subtitle": "Your Budget Zen lifetime license is now active. Thank you for your purchase!",
+      "goToDashboard": "Go to Dashboard"
+    }
+  },
   "common": {
     "unexpectedError": "An unexpected error occurred"
   },

@@ -31,7 +31,12 @@ export interface Profile {
   onboarding_completed: boolean
   trial_ends_at: string | null
   subscription_status: SubscriptionStatus
+  stripe_customer_id: string | null
+  stripe_payment_intent_id: string | null
+  stripe_checkout_session_id: string | null
+  payment_completed_at: string | null
   created_at: string
+  updated_at: string
 }
 
 export interface Category {

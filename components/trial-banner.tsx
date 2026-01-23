@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { differenceInDays } from 'date-fns'
 import { Clock, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
+import { createCheckoutSession } from '@/app/actions/stripe'
+import { toast } from 'sonner'
 
 interface TrialBannerProps {
   trialEndsAt: string
@@ -12,6 +14,7 @@ interface TrialBannerProps {
 
 export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
   const t = useTranslations()
+  const [isLoading, setIsLoading] = useState(false)
 
   const trialEndDate = new Date(trialEndsAt)
   const now = new Date()
@@ -24,6 +27,27 @@ export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
 
   const isLastDay = daysRemaining === 0
 
+  const handleUpgrade = async () => {
+    try {
+      setIsLoading(true)
+
+      const result = await createCheckoutSession()
+
+      if (!result.success || !result.url) {
+        toast.error(result.error || 'Failed to start checkout')
+        return
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = result.url
+    } catch (error) {
+      console.error('Checkout error:', error)
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="bg-zinc-900 text-white">
       <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
@@ -35,13 +59,14 @@ export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
               : t('trial.banner', { days: daysRemaining })}
           </span>
         </div>
-        <Link
-          href="https://wise.com/pay/r/-lEdgTa7BN12XHc"
-          className="flex items-center gap-1.5 text-sm font-medium text-white hover:text-zinc-200 transition-colors"
+        <button
+          onClick={handleUpgrade}
+          disabled={isLoading}
+          className="flex items-center gap-1.5 text-sm font-medium text-white hover:text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {t('trial.getLicense')}
+          {isLoading ? 'Loading...' : t('trial.getLicense')}
           <ArrowRight className="w-4 h-4" />
-        </Link>
+        </button>
       </div>
     </div>
   )

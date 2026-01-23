@@ -62,6 +62,13 @@
     "cta": "Lifetime-Zugang für 29 € kaufen",
     "later": "Vielleicht später"
   },
+  "payment": {
+    "success": {
+      "title": "Zahlung erfolgreich!",
+      "subtitle": "Deine Budget Zen Lifetime-Lizenz ist jetzt aktiv. Vielen Dank für deinen Kauf!",
+      "goToDashboard": "Zum Dashboard"
+    }
+  },
   "common": {
     "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten"
   },

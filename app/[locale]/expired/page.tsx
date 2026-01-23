@@ -4,9 +4,9 @@ import { getTranslations, getLocale } from 'next-intl/server'
 import { getServerSupabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { Receipt, ArrowRight, LogOut } from 'lucide-react'
+import { Receipt, LogOut } from 'lucide-react'
 import { SignOutButton } from '@clerk/nextjs'
-import Link from 'next/link'
+import { ExpiredCTA } from '@/components/expired-cta'
 
 export default async function ExpiredPage() {
   const { userId } = await auth()
@@ -90,12 +90,7 @@ export default async function ExpiredPage() {
           )}
 
           {/* CTA */}
-          <Link href="https://wise.com/pay/r/-lEdgTa7BN12XHc">
-            <Button size="lg" className="w-full text-lg py-6 h-auto mb-4">
-              {t('expired.cta')}
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+          <ExpiredCTA />
 
           <SignOutButton>
             <button className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors">
