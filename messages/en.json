@@ -50,22 +50,22 @@
   "trial": {
     "banner": "Trial ends in {days} days.",
     "bannerLastDay": "Trial ends today!",
-    "getLicense": "Get Lifetime License"
+    "getLicense": "Upgrade to Premium"
   },
   "expired": {
     "title": "Your trial has ended",
     "subtitle": "Thank you for trying Budget Zen",
     "stats": {
       "tracked": "You tracked {count} transactions",
-      "message": "Don't lose your progress. Unlock lifetime access now."
+      "message": "Don't lose your progress. Upgrade to premium now."
     },
-    "cta": "Buy Lifetime Access for €29",
+    "cta": "Upgrade to Premium",
     "later": "Maybe later"
   },
   "payment": {
     "success": {
       "title": "Payment Successful!",
-      "subtitle": "Your Budget Zen lifetime license is now active. Thank you for your purchase!",
+      "subtitle": "Your Budget Zen premium subscription is now active. Thank you for your purchase!",
       "goToDashboard": "Go to Dashboard"
     }
   },

@@ -44,9 +44,16 @@ export async function POST(request: Request) {
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
-      case 'payment_intent.succeeded':
-        // Optional: Handle as backup for checkout.session.completed
-        console.log('PaymentIntent succeeded:', event.data.object.id)
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
+        break
+
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+        break
+
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       default:
@@ -105,8 +112,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscription_status: 'active',
         stripe_customer_id: session.customer as string,
         stripe_checkout_session_id: session.id,
-        stripe_payment_intent_id: session.payment_intent as string,
-        payment_completed_at: new Date().toISOString(),
+        stripe_subscription_id: session.subscription as string,
+        subscription_started_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', clerkUserId)
@@ -123,6 +130,138 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   } catch (error) {
     console.error('Error handling checkout.session.completed:', error)
     // Stripe will retry webhook delivery if we throw or return 500
+    throw error
+  }
+}
+
+/**
+ * Handle customer.subscription.created event
+ * Backup handler in case checkout.session.completed doesn't fire
+ */
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  try {
+    console.log('Processing customer.subscription.created:', subscription.id)
+
+    // Get customer to find clerk_user_id
+    const customerId = subscription.customer as string
+
+    const { data: profile } = await getServerSupabase()
+      .from('profiles')
+      .select('user_id, subscription_status')
+      .eq('stripe_customer_id', customerId)
+      .single()
+
+    if (!profile) {
+      console.error('No profile found for customer:', customerId)
+      return
+    }
+
+    // Update subscription ID if not already set
+    if (subscription.status === 'active') {
+      await getServerSupabase()
+        .from('profiles')
+        .update({
+          subscription_status: 'active',
+          stripe_subscription_id: subscription.id,
+          subscription_started_at: new Date(subscription.created * 1000).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', profile.user_id)
+
+      console.log(`✅ Subscription created for user: ${profile.user_id}`)
+    }
+  } catch (error) {
+    console.error('Error handling customer.subscription.created:', error)
+    throw error
+  }
+}
+
+/**
+ * Handle customer.subscription.updated event
+ * Manages subscription status changes (active, canceled, past_due)
+ */
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  try {
+    console.log('Processing customer.subscription.updated:', subscription.id)
+
+    const customerId = subscription.customer as string
+
+    const { data: profile } = await getServerSupabase()
+      .from('profiles')
+      .select('user_id')
+      .eq('stripe_customer_id', customerId)
+      .single()
+
+    if (!profile) {
+      console.error('No profile found for customer:', customerId)
+      return
+    }
+
+    // Map Stripe status to our subscription_status
+    let subscriptionStatus: 'trial' | 'active' | 'expired'
+
+    if (subscription.status === 'active' || subscription.status === 'trialing') {
+      subscriptionStatus = 'active'
+    } else if (
+      subscription.status === 'canceled' ||
+      subscription.status === 'unpaid' ||
+      subscription.status === 'past_due'
+    ) {
+      subscriptionStatus = 'expired'
+    } else {
+      subscriptionStatus = 'expired' // Default to expired for unknown states
+    }
+
+    await getServerSupabase()
+      .from('profiles')
+      .update({
+        subscription_status: subscriptionStatus,
+        stripe_subscription_id: subscription.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', profile.user_id)
+
+    console.log(
+      `✅ Subscription updated for user: ${profile.user_id} (status: ${subscriptionStatus})`
+    )
+  } catch (error) {
+    console.error('Error handling customer.subscription.updated:', error)
+    throw error
+  }
+}
+
+/**
+ * Handle customer.subscription.deleted event
+ * Marks subscription as expired when canceled
+ */
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  try {
+    console.log('Processing customer.subscription.deleted:', subscription.id)
+
+    const customerId = subscription.customer as string
+
+    const { data: profile } = await getServerSupabase()
+      .from('profiles')
+      .select('user_id')
+      .eq('stripe_customer_id', customerId)
+      .single()
+
+    if (!profile) {
+      console.error('No profile found for customer:', customerId)
+      return
+    }
+
+    await getServerSupabase()
+      .from('profiles')
+      .update({
+        subscription_status: 'expired',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', profile.user_id)
+
+    console.log(`✅ Subscription deleted for user: ${profile.user_id}`)
+  } catch (error) {
+    console.error('Error handling customer.subscription.deleted:', error)
     throw error
   }
 }

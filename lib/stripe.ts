@@ -28,6 +28,7 @@ export function getStripe(): Stripe {
  * Stripe configuration constants
  */
 export const STRIPE_CONFIG = {
-  priceId: process.env.STRIPE_PRICE_ID!,
+  monthlyPriceId: process.env.STRIPE_MONTHLY_PRICE_ID!,
+  yearlyPriceId: process.env.STRIPE_YEARLY_PRICE_ID!,
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
 } as const

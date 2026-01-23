@@ -13,10 +13,13 @@ export interface CreateCheckoutSessionResponse {
 }
 
 /**
- * Creates a Stripe Checkout Session for the €29 lifetime license purchase
+ * Creates a Stripe Checkout Session for subscription purchase
  * Links Clerk userId to Stripe customer via metadata
+ * @param planType - 'monthly' (€4.99/month) or 'yearly' (€49.99/year)
  */
-export async function createCheckoutSession(): Promise<CreateCheckoutSessionResponse> {
+export async function createCheckoutSession(
+  planType: 'monthly' | 'yearly' = 'monthly'
+): Promise<CreateCheckoutSessionResponse> {
   try {
     // 1. Authenticate user
     const { userId } = await auth()
@@ -54,12 +57,15 @@ export async function createCheckoutSession(): Promise<CreateCheckoutSessionResp
 
     // 6. Create Checkout Session
     const session = await stripe.checkout.sessions.create({
-      mode: 'payment', // One-time payment (NOT subscription)
+      mode: 'subscription', // Recurring subscription
       customer: customerId, // Reuse existing or let Stripe create new
       customer_creation: customerId ? undefined : 'always', // Create customer if not exists
       line_items: [
         {
-          price: STRIPE_CONFIG.priceId,
+          price:
+            planType === 'monthly'
+              ? STRIPE_CONFIG.monthlyPriceId
+              : STRIPE_CONFIG.yearlyPriceId,
           quantity: 1,
         },
       ],
@@ -70,8 +76,6 @@ export async function createCheckoutSession(): Promise<CreateCheckoutSessionResp
       },
       // Save customer details
       billing_address_collection: 'auto',
-      // Allow promotion codes
-      allow_promotion_codes: true,
     })
 
     // 7. Store checkout session ID for webhook verification

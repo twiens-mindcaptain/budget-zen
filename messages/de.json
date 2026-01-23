@@ -50,22 +50,22 @@
   "trial": {
     "banner": "Testphase endet in {days} Tagen.",
     "bannerLastDay": "Testphase endet heute!",
-    "getLicense": "Lifetime-Lizenz sichern"
+    "getLicense": "Auf Premium upgraden"
   },
   "expired": {
     "title": "Deine Testphase ist beendet",
     "subtitle": "Danke, dass du Budget Zen ausprobiert hast",
     "stats": {
       "tracked": "Du hast {count} Transaktionen erfasst",
-      "message": "Verliere nicht deinen Fortschritt. Sichere dir jetzt lebenslangen Zugang."
+      "message": "Verliere nicht deinen Fortschritt. Upgrade jetzt auf Premium."
     },
-    "cta": "Lifetime-Zugang für 29 € kaufen",
+    "cta": "Auf Premium upgraden",
     "later": "Vielleicht später"
   },
   "payment": {
     "success": {
       "title": "Zahlung erfolgreich!",
-      "subtitle": "Deine Budget Zen Lifetime-Lizenz ist jetzt aktiv. Vielen Dank für deinen Kauf!",
+      "subtitle": "Dein Budget Zen Premium-Abonnement ist jetzt aktiv. Vielen Dank für deinen Kauf!",
       "goToDashboard": "Zum Dashboard"
     }
   },

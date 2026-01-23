@@ -6,6 +6,15 @@ import { differenceInDays } from 'date-fns'
 import { Clock, ArrowRight } from 'lucide-react'
 import { createCheckoutSession } from '@/app/actions/stripe'
 import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { PricingToggle } from '@/components/pricing-toggle'
 
 interface TrialBannerProps {
   trialEndsAt: string
@@ -15,6 +24,8 @@ interface TrialBannerProps {
 export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
   const t = useTranslations()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPricingDialog, setShowPricingDialog] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly')
 
   const trialEndDate = new Date(trialEndsAt)
   const now = new Date()
@@ -31,7 +42,7 @@ export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
     try {
       setIsLoading(true)
 
-      const result = await createCheckoutSession()
+      const result = await createCheckoutSession(selectedPlan)
 
       if (!result.success || !result.url) {
         toast.error(result.error || 'Failed to start checkout')
@@ -49,25 +60,59 @@ export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
   }
 
   return (
-    <div className="bg-zinc-900 text-white">
-      <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="w-4 h-4 text-zinc-400" />
-          <span>
-            {isLastDay
-              ? t('trial.bannerLastDay')
-              : t('trial.banner', { days: daysRemaining })}
-          </span>
+    <>
+      <div className="bg-zinc-900 text-white">
+        <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="w-4 h-4 text-zinc-400" />
+            <span>
+              {isLastDay
+                ? t('trial.bannerLastDay')
+                : t('trial.banner', { days: daysRemaining })}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowPricingDialog(true)}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 text-sm font-medium text-white hover:text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {t('trial.getLicense')}
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          onClick={handleUpgrade}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 text-sm font-medium text-white hover:text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Loading...' : t('trial.getLicense')}
-          <ArrowRight className="w-4 h-4" />
-        </button>
       </div>
-    </div>
+
+      {/* Pricing Dialog */}
+      <Dialog open={showPricingDialog} onOpenChange={setShowPricingDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Choose Your Plan</DialogTitle>
+            <DialogDescription>
+              Select monthly or yearly billing. Cancel anytime.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            <PricingToggle
+              defaultPlan="monthly"
+              onPlanChange={(plan) => setSelectedPlan(plan)}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowPricingDialog(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpgrade} disabled={isLoading} className="flex-1">
+              {isLoading ? 'Loading...' : 'Continue to Checkout'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
