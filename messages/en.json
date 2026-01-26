@@ -69,6 +69,18 @@
       "goToDashboard": "Go to Dashboard"
     }
   },
+  "pricing": {
+    "chooseYourPlan": "Choose Your Plan",
+    "selectBilling": "Select monthly or yearly billing. Cancel anytime.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "perMonth": "per month",
+    "save": "Save {percent}%",
+    "saveAmount": "save {amount}",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "continueToCheckout": "Continue to Checkout"
+  },
   "common": {
     "unexpectedError": "An unexpected error occurred"
   },
@@ -140,7 +152,11 @@
     "deleteTransaction": "Delete Transaction",
     "deleteWarning": "Are you sure you want to delete this transaction? This action cannot be undone.",
     "delete": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "add": "Add",
+    "enterToSave": "Enter to save",
+    "noIncomeCategories": "No income categories",
+    "newCategory": "New Category..."
   },
   "table": {
     "date": "Date",

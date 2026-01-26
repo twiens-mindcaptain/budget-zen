@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Check } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface PricingToggleProps {
   defaultPlan?: 'monthly' | 'yearly'
@@ -9,6 +10,7 @@ interface PricingToggleProps {
 }
 
 export function PricingToggle({ defaultPlan = 'monthly', onPlanChange }: PricingToggleProps) {
+  const t = useTranslations()
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>(defaultPlan)
 
   const handlePlanChange = (plan: 'monthly' | 'yearly') => {
@@ -28,7 +30,7 @@ export function PricingToggle({ defaultPlan = 'monthly', onPlanChange }: Pricing
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
           }`}
         >
-          Monthly
+          {t('pricing.monthly')}
         </button>
         <button
           onClick={() => handlePlanChange('yearly')}
@@ -38,9 +40,9 @@ export function PricingToggle({ defaultPlan = 'monthly', onPlanChange }: Pricing
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
           }`}
         >
-          Yearly
+          {t('pricing.yearly')}
           <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
-            Save 17%
+            {t('pricing.save', { percent: 17 })}
           </span>
         </button>
       </div>
@@ -61,9 +63,9 @@ export function PricingToggle({ defaultPlan = 'monthly', onPlanChange }: Pricing
               <Check className="w-4 h-4 text-white" />
             </div>
           )}
-          <div className="text-sm text-zinc-600 mb-2">Monthly</div>
+          <div className="text-sm text-zinc-600 mb-2">{t('pricing.monthly')}</div>
           <div className="text-3xl font-bold text-zinc-900 mb-1">€4.99</div>
-          <div className="text-xs text-zinc-500">per month</div>
+          <div className="text-xs text-zinc-500">{t('pricing.perMonth')}</div>
         </div>
 
         {/* Yearly Plan */}
@@ -80,11 +82,11 @@ export function PricingToggle({ defaultPlan = 'monthly', onPlanChange }: Pricing
               <Check className="w-4 h-4 text-white" />
             </div>
           )}
-          <div className="text-sm text-zinc-600 mb-2">Yearly</div>
+          <div className="text-sm text-zinc-600 mb-2">{t('pricing.yearly')}</div>
           <div className="text-3xl font-bold text-zinc-900 mb-1">€49.99</div>
           <div className="text-xs text-zinc-500">
-            €4.17/month
-            <span className="ml-1 text-green-600 font-medium">(save €9.89)</span>
+            €4.17/{t('pricing.perMonth').toLowerCase()}
+            <span className="ml-1 text-green-600 font-medium">({t('pricing.saveAmount', { amount: '€9.89' })})</span>
           </div>
         </div>
       </div>

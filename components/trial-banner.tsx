@@ -86,9 +86,9 @@ export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
       <Dialog open={showPricingDialog} onOpenChange={setShowPricingDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Choose Your Plan</DialogTitle>
+            <DialogTitle>{t('pricing.chooseYourPlan')}</DialogTitle>
             <DialogDescription>
-              Select monthly or yearly billing. Cancel anytime.
+              {t('pricing.selectBilling')}
             </DialogDescription>
           </DialogHeader>
 
@@ -105,10 +105,10 @@ export function TrialBanner({ trialEndsAt, locale }: TrialBannerProps) {
               onClick={() => setShowPricingDialog(false)}
               className="flex-1"
             >
-              Cancel
+              {t('pricing.cancel')}
             </Button>
             <Button onClick={handleUpgrade} disabled={isLoading} className="flex-1">
-              {isLoading ? 'Loading...' : 'Continue to Checkout'}
+              {isLoading ? t('pricing.loading') : t('pricing.continueToCheckout')}
             </Button>
           </div>
         </DialogContent>

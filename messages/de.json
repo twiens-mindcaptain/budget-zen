@@ -69,6 +69,18 @@
       "goToDashboard": "Zum Dashboard"
     }
   },
+  "pricing": {
+    "chooseYourPlan": "Wähle deinen Plan",
+    "selectBilling": "Wähle monatliche oder jährliche Zahlung. Jederzeit kündbar.",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "perMonth": "pro Monat",
+    "save": "{percent}% sparen",
+    "saveAmount": "{amount} sparen",
+    "cancel": "Abbrechen",
+    "loading": "Wird geladen...",
+    "continueToCheckout": "Zur Kasse"
+  },
   "common": {
     "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten"
   },
@@ -140,7 +152,11 @@
     "deleteTransaction": "Transaktion löschen",
     "deleteWarning": "Möchtest du diese Transaktion wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "delete": "Löschen",
-    "deleting": "Lösche..."
+    "deleting": "Lösche...",
+    "add": "Hinzufügen",
+    "enterToSave": "Enter zum Speichern",
+    "noIncomeCategories": "Keine Einnahmekategorien",
+    "newCategory": "Neue Kategorie..."
   },
   "table": {
     "date": "Datum",

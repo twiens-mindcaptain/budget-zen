@@ -8,6 +8,7 @@ import { BillsChecklist } from '@/components/dashboard/bills-checklist'
 import { SinkingFundsProgress } from '@/components/dashboard/sinking-funds-progress'
 import { BudgetTable } from '@/components/dashboard/budget-table'
 import { QuickAddDialog } from '@/components/transactions/quick-add-dialog'
+import { InlineQuickAdd } from '@/components/transactions/inline-quick-add'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -344,18 +345,17 @@ export function DashboardContent({
       </Tabs>
 
       {/* Quick Add Section */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium text-zinc-900">{t('dashboard.transactions')}</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {t('dashboard.pressNToAdd', { key: 'N' }).split('N')[0]}
-            <kbd className="mx-1 px-1.5 py-0.5 text-xs bg-zinc-100 text-zinc-700 border border-zinc-300 rounded font-mono">
-              N
-            </kbd>
-            {t('dashboard.pressNToAdd', { key: 'N' }).split('N')[1]}
-          </p>
+          <QuickAddDialog
+            categories={categories}
+            currency={currency}
+            locale={locale}
+            onOptimisticCreate={handleOptimisticCreate}
+          />
         </div>
-        <QuickAddDialog
+        <InlineQuickAdd
           categories={categories}
           currency={currency}
           locale={locale}

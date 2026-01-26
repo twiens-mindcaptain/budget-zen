@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
-import { Plus, Loader2, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Loader2, ArrowRightLeft, ChevronDown, ChevronUp, PlusCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { getCategoryIcon } from '@/lib/icon-mapper'
 import { getCategoryDisplayName } from '@/lib/i18n-helpers'
@@ -30,11 +30,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectSeparator,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { createTransaction } from '@/app/actions/transaction'
 import { insertTransactionSchema, type InsertTransactionInput, type Category } from '@/lib/types'
+import { CategoryDialog } from '@/components/settings/category-dialog'
 import { formatCurrency } from '@/lib/currency'
 import { toast } from 'sonner'
 
@@ -54,6 +56,8 @@ export function QuickAddDialog({ categories, currency, locale, onOptimisticCreat
 
   // Currency converter state
   const [showConverter, setShowConverter] = useState(false)
+  // Category creation dialog state
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false)
   const [foreignCurrency, setForeignCurrency] = useState<CurrencyCode>('MXN')
   const [foreignAmount, setForeignAmount] = useState('')
   const [exchangeRate, setExchangeRate] = useState<{ rate: number; date: string } | null>(null)
@@ -113,6 +117,21 @@ export function QuickAddDialog({ categories, currency, locale, onOptimisticCreat
         }
       }
     }
+  }
+
+  // Handle category selection - detect "__new__" to open creation dialog
+  const handleCategoryChange = (value: string) => {
+    if (value === '__new__') {
+      setShowCategoryDialog(true)
+    } else {
+      form.setValue('category_id', value)
+    }
+  }
+
+  // Handle category created - select the new category
+  const handleCategoryCreated = (newCategory: Category) => {
+    form.setValue('category_id', newCategory.id)
+    setShowCategoryDialog(false)
   }
 
   // Fetch exchange rate when converter opens or currency changes
@@ -350,6 +369,7 @@ export function QuickAddDialog({ categories, currency, locale, onOptimisticCreat
   )
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="lg" className="gap-2">
@@ -506,7 +526,7 @@ export function QuickAddDialog({ categories, currency, locale, onOptimisticCreat
                 <FormItem>
                   <FormLabel>{t('transaction.category')}</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={handleCategoryChange}
                     value={field.value}
                     disabled={isSubmitting}
                   >
@@ -530,6 +550,13 @@ export function QuickAddDialog({ categories, currency, locale, onOptimisticCreat
                           </SelectItem>
                         )
                       })}
+                      <SelectSeparator />
+                      <SelectItem value="__new__">
+                        <div className="flex items-center gap-2 text-blue-600">
+                          <PlusCircle className="w-4 h-4" />
+                          <span>{t('transaction.newCategory')}</span>
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -602,5 +629,13 @@ export function QuickAddDialog({ categories, currency, locale, onOptimisticCreat
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Category Creation Dialog */}
+    <CategoryDialog
+      open={showCategoryDialog}
+      onOpenChange={setShowCategoryDialog}
+      onSuccess={handleCategoryCreated}
+    />
+    </>
   )
 }
