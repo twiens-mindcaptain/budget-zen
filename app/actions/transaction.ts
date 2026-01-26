@@ -180,7 +180,8 @@ export async function getCategories() {
 
 /**
  * Calculates monthly statistics (income, expenses, balance) for a specific month
- * Uses category type to determine income vs expense (not just amount sign)
+ * Reads from pre-aggregated monthly_summaries table (updated via triggers)
+ * Falls back to real-time calculation if no summary exists
  */
 export async function getMonthlyStatistics(monthDate: Date = new Date()): Promise<MonthlyStatistics> {
   try {
@@ -190,10 +191,29 @@ export async function getMonthlyStatistics(monthDate: Date = new Date()): Promis
       throw new Error('Unauthorized')
     }
 
+    const monthIso = format(monthDate, 'yyyy-MM')
+
+    // Try to read from pre-aggregated summary first (fast path)
+    const { data: summary, error: summaryError } = await getServerSupabase()
+      .from('monthly_summaries')
+      .select('total_income, total_expenses, balance')
+      .eq('user_id', userId)
+      .eq('month_iso', monthIso)
+      .single()
+
+    if (!summaryError && summary) {
+      // Use cached summary
+      return {
+        income: parseFloat(summary.total_income).toFixed(2),
+        expenses: parseFloat(summary.total_expenses).toFixed(2),
+        balance: parseFloat(summary.balance).toFixed(2),
+      }
+    }
+
+    // Fallback: Calculate from transactions (for months without data)
     const startOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1), 'yyyy-MM-dd')
     const endOfMonth = format(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0), 'yyyy-MM-dd')
 
-    // Get all transactions for the month with category info joined
     const { data, error } = await getServerSupabase()
       .from('transactions')
       .select(`
@@ -214,18 +234,13 @@ export async function getMonthlyStatistics(monthDate: Date = new Date()): Promis
 
     data?.forEach((transaction) => {
       const amount = Math.abs(parseFloat(transaction.amount))
-
-      // Supabase returns related data - could be object or array depending on relationship
       const categoryData = transaction.category
       const category = Array.isArray(categoryData) ? categoryData[0] : categoryData
-
-      // Check if transaction belongs to an income category (case-insensitive)
       const isIncome = category?.type?.toUpperCase() === 'INCOME'
 
       if (isIncome) {
         totalIncome += amount
       } else if (amount > 0) {
-        // Expense (use absolute value since amounts might be stored as negative)
         totalExpenses += amount
       }
     })

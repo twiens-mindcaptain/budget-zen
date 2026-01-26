@@ -215,3 +215,51 @@ export interface SafeToSpendData {
   totalAssigned: string
   availableToAssign: string
 }
+
+// ============================================
+// ANALYTICS TYPES
+// ============================================
+
+/**
+ * MonthlySummary - Pre-aggregated monthly statistics
+ * Updated automatically via database triggers on transaction changes
+ */
+export interface MonthlySummary {
+  id: string
+  user_id: string
+  month_iso: string // YYYY-MM format
+  total_income: string // decimal as string
+  total_expenses: string // decimal as string
+  balance: string // income - expenses
+  transaction_count: number
+  expenses_by_type: Record<string, number> // {"FIX": 800, "VARIABLE": 450, ...}
+  income_by_category: Record<string, number> // {category_id: amount}
+  expenses_by_category: Record<string, number> // {category_id: amount}
+  calculated_at: string
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * MonthlyTrend - For year-over-year or multi-month analytics
+ */
+export interface MonthlyTrend {
+  month_iso: string
+  total_income: number
+  total_expenses: number
+  balance: number
+  transaction_count: number
+}
+
+/**
+ * CategorySpending - Spending breakdown for a specific category
+ */
+export interface CategorySpending {
+  category_id: string
+  category_name: string
+  category_icon: string
+  category_color: string
+  category_type: ZBBCategoryType
+  total_amount: number
+  percentage: number // of total expenses
+}
